@@ -86,6 +86,29 @@ public class MainFrame extends JFrame
         toolPanel.getDeleteEdgeButton().addActionListener(e ->
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
+
+        controlPanel.getStartButton().addActionListener(e -> {
+
+            AlgorithmDialog dialog =
+                    new AlgorithmDialog(this);
+
+            dialog.setVisible(true);
+
+            AlgorithmMode mode =
+                    dialog.getSelectedMode();
+
+            if (mode == null)
+                return;
+
+            if (mode == AlgorithmMode.INSTANT) {
+
+            }
+            
+            else {
+
+            }
+
+        });
     }
 
     /**
