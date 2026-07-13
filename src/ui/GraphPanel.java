@@ -13,13 +13,15 @@ public class GraphPanel extends JPanel {
 
     private final Graph graph;
 
-    private static final int RADIUS = 20;
-    private static final int EDGE_TOLERANCE = 8;
-
     private EditorMode mode = EditorMode.NONE;
 
-    // первая выбранная вершина при создании ребра
+    private EditorListener listener;
+
     private Vertex firstVertex = null;
+
+    private static final int RADIUS = 20;
+
+    private static final int EDGE_TOLERANCE = 8;
 
     public GraphPanel(Graph graph) {
 
@@ -28,16 +30,29 @@ public class GraphPanel extends JPanel {
         setBackground(Color.WHITE);
 
         addMouseListener(new MouseAdapter() {
+
             @Override
             public void mouseClicked(MouseEvent e) {
                 handleMouseClick(e.getX(), e.getY());
             }
         });
+
+    }
+
+    public void setEditorListener(EditorListener listener) {
+        this.listener = listener;
+    }
+
+    public EditorMode getMode() {
+        return mode;
     }
 
     public void setMode(EditorMode mode) {
+
         this.mode = mode;
         firstVertex = null;
+
+        repaint();
     }
 
     private void handleMouseClick(int x, int y) {
@@ -45,18 +60,22 @@ public class GraphPanel extends JPanel {
         switch (mode) {
 
             case ADD_VERTEX:
+
                 addVertex(x, y);
                 break;
 
             case ADD_EDGE:
+
                 addEdge(x, y);
                 break;
 
             case DELETE_VERTEX:
+
                 deleteVertex(x, y);
                 break;
 
-           case DELETE_EDGE:
+            case DELETE_EDGE:
+
                 deleteEdge(x, y);
                 break;
 
@@ -65,6 +84,9 @@ public class GraphPanel extends JPanel {
         }
     }
 
+    /**
+     * Добавление вершины.
+     */
     private void addVertex(int x, int y) {
 
         String name = JOptionPane.showInputDialog(
@@ -80,22 +102,21 @@ public class GraphPanel extends JPanel {
         if (name.isEmpty())
             return;
 
-        if (graph.findVertexByName(name) != null) {
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Вершина с таким именем уже существует."
-            );
+        if (graph.findVertexByName(name) != null)
             return;
-        }
 
         graph.addVertex(name, x, y);
 
-        repaint();
+        if (listener != null) {
+            listener.modeFinished();
+        }
 
-        mode = EditorMode.NONE;
+        repaint();
     }
 
+    /**
+     * Добавление ребра.
+     */
     private void addEdge(int x, int y) {
 
         Vertex vertex = findVertex(x, y);
@@ -126,21 +147,23 @@ public class GraphPanel extends JPanel {
 
             graph.addEdge(firstVertex, vertex, weight);
 
-        } catch (NumberFormatException ex) {
+            firstVertex = null;
 
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Некорректный вес."
-            );
+            if (listener != null){
+                listener.modeFinished();
+            }
+
+            repaint();
+
         }
+        catch (NumberFormatException ex) {
 
-        firstVertex = null;
-
-        mode = EditorMode.NONE;
-
-        repaint();
+        }
     }
 
+    /**
+     * Удаление вершины.
+     */
     private void deleteVertex(int x, int y) {
 
         Vertex vertex = findVertex(x, y);
@@ -150,11 +173,17 @@ public class GraphPanel extends JPanel {
 
         graph.removeVertex(vertex);
 
+        if (listener != null) {
+            listener.modeFinished();
+        }
+
         repaint();
 
-        mode = EditorMode.NONE;
     }
 
+    /**
+     * Удаление ребра.
+     */
     private void deleteEdge(int x, int y) {
 
         Edge edge = findEdge(x, y);
@@ -164,13 +193,16 @@ public class GraphPanel extends JPanel {
 
         graph.removeEdge(edge);
 
+        if (listener != null) {
+            listener.modeFinished();
+        }
+
         repaint();
 
-        mode = EditorMode.NONE;
     }
 
     /**
-     * Возвращает вершину, по которой кликнул пользователь.
+     * Поиск вершины по координатам.
      */
     private Vertex findVertex(int x, int y) {
 
@@ -186,6 +218,9 @@ public class GraphPanel extends JPanel {
         return null;
     }
 
+    /**
+     * Поиск ребра по координатам.
+     */
     private Edge findEdge(int x, int y) {
 
         for (Edge edge : graph.getEdges()) {
@@ -199,14 +234,15 @@ public class GraphPanel extends JPanel {
                     edge.getTo().getY()
             );
 
-            if (distance <= EDGE_TOLERANCE) {
+            if (distance <= EDGE_TOLERANCE)
                 return edge;
-            }
         }
-
         return null;
     }
 
+    /**
+     * Расстояние от точки до отрезка.
+     */
     private double distanceToSegment(
             double px,
             double py,
@@ -218,12 +254,12 @@ public class GraphPanel extends JPanel {
         double dx = x2 - x1;
         double dy = y2 - y1;
 
-        if (dx == 0 && dy == 0) {
+        if (dx == 0 && dy == 0)
             return Point.distance(px, py, x1, y1);
-        }
 
-        double t = ((px - x1) * dx + (py - y1) * dy)
-                / (dx * dx + dy * dy);
+        double t =
+                ((px - x1) * dx + (py - y1) * dy)
+                        / (dx * dx + dy * dy);
 
         t = Math.max(0, Math.min(1, t));
 
@@ -233,60 +269,9 @@ public class GraphPanel extends JPanel {
         return Point.distance(px, py, nearestX, nearestY);
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-
-        super.paintComponent(g);
-
-        Graphics2D g2 = (Graphics2D) g;
-
-        g2.setColor(Color.BLACK);
-
-        for (Edge edge : graph.getEdges()) {
-
-            drawDirectedEdge(g2, edge);
-        }
-
-        for (Vertex vertex : graph.getVertices()) {
-
-            int x = vertex.getX();
-            int y = vertex.getY();
-
-            if (vertex.equals(firstVertex)) {
-                g2.setColor(Color.RED);
-            } else {
-                g2.setColor(Color.YELLOW);
-            }
-
-            g2.fillOval(
-                    x - RADIUS,
-                    y - RADIUS,
-                    RADIUS * 2,
-                    RADIUS * 2
-            );
-
-            g2.setColor(Color.BLACK);
-
-            g2.drawOval(
-                    x - RADIUS,
-                    y - RADIUS,
-                    RADIUS * 2,
-                    RADIUS * 2
-            );
-
-            FontMetrics fm = g2.getFontMetrics();
-
-            int tx = x - fm.stringWidth(vertex.getName()) / 2;
-            int ty = y + fm.getAscent() / 2 - 2;
-
-            g2.drawString(
-                    vertex.getName(),
-                    tx,
-                    ty
-            );
-        }
-    }
-
+    /**
+     * Рисование ориентированного ребра.
+     */
     private void drawDirectedEdge(Graphics2D g2, Edge edge) {
 
         Vertex from = edge.getFrom();
@@ -311,28 +296,88 @@ public class GraphPanel extends JPanel {
         int arrowLength = 12;
         double arrowAngle = Math.toRadians(25);
 
-        int xArrow1 = (int) (endX
-                - arrowLength * Math.cos(angle - arrowAngle));
+        int xArrow1 = (int) (
+                endX - arrowLength * Math.cos(angle - arrowAngle));
 
-        int yArrow1 = (int) (endY
-                - arrowLength * Math.sin(angle - arrowAngle));
+        int yArrow1 = (int) (
+                endY - arrowLength * Math.sin(angle - arrowAngle));
 
-        int xArrow2 = (int) (endX
-                - arrowLength * Math.cos(angle + arrowAngle));
+        int xArrow2 = (int) (
+                endX - arrowLength * Math.cos(angle + arrowAngle));
 
-        int yArrow2 = (int) (endY
-                - arrowLength * Math.sin(angle + arrowAngle));
+        int yArrow2 = (int) (
+                endY - arrowLength * Math.sin(angle + arrowAngle));
 
         g2.drawLine(endX, endY, xArrow1, yArrow1);
         g2.drawLine(endX, endY, xArrow2, yArrow2);
+
+        String weight = String.valueOf(edge.getWeight());
+
+        FontMetrics fm = g2.getFontMetrics();
 
         int textX = (startX + endX) / 2;
         int textY = (startY + endY) / 2;
 
         g2.drawString(
-                String.valueOf(edge.getWeight()),
-                textX,
-                textY
+                weight,
+                textX - fm.stringWidth(weight) / 2,
+                textY - 5
         );
-    };
-};
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+
+        super.paintComponent(g);
+
+        Graphics2D g2 = (Graphics2D) g;
+
+        g2.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+
+
+        g2.setColor(Color.BLACK);
+
+        for (Edge edge : graph.getEdges()) {
+            drawDirectedEdge(g2, edge);
+        }
+
+
+        for (Vertex vertex : graph.getVertices()) {
+
+            int x = vertex.getX();
+            int y = vertex.getY();
+
+            if (vertex.equals(firstVertex))
+                g2.setColor(Color.RED);
+            else
+                g2.setColor(new Color(255, 180, 0));
+
+            g2.fillOval(
+                    x - RADIUS,
+                    y - RADIUS,
+                    RADIUS * 2,
+                    RADIUS * 2
+            );
+
+            g2.setColor(Color.BLACK);
+
+            g2.drawOval(
+                    x - RADIUS,
+                    y - RADIUS,
+                    RADIUS * 2,
+                    RADIUS * 2
+            );
+
+            FontMetrics fm = g2.getFontMetrics();
+
+            int tx = x - fm.stringWidth(vertex.getName()) / 2;
+            int ty = y + fm.getAscent() / 2 - 2;
+
+            g2.drawString(vertex.getName(), tx, ty);
+        }
+
+    }
+
+}

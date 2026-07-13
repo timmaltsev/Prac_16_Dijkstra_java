@@ -5,59 +5,140 @@ import model.Graph;
 import javax.swing.*;
 import java.awt.*;
 
-public class MainFrame extends JFrame {
+public class MainFrame extends JFrame
+                       implements EditorListener {
 
     private final Graph graph;
+
     private final GraphPanel graphPanel;
+    private final ToolPanel toolPanel;
+    private final ControlPanel controlPanel;
+    private final LogPanel logPanel;
+
+    private JButton activeButton = null;
 
     public MainFrame(Graph graph) {
 
         this.graph = graph;
 
         setTitle("Прототип");
-        setSize(1000, 700);
-        setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        setLayout(new BorderLayout());
+        setSize(1200, 800);
+        setLocationRelativeTo(null);
 
         graphPanel = new GraphPanel(this.graph);
-        add(graphPanel, BorderLayout.CENTER);
 
-        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        toolPanel = new ToolPanel();
 
-        JButton addVertexButton = new JButton("Добавить вершину");
-        JButton addEdgeButton = new JButton("Добавить ребро");
-        JButton deleteVertexButton = new JButton("Удалить вершину");
-        JButton deleteEdgeButton = new JButton("Удалить ребро");
-        JButton cancelButton = new JButton("Отмена");
+        controlPanel = new ControlPanel();
 
-        controlPanel.add(addVertexButton);
-        controlPanel.add(addEdgeButton);
-        controlPanel.add(deleteVertexButton);
-        controlPanel.add(deleteEdgeButton);
-        controlPanel.add(cancelButton);
+        logPanel = new LogPanel();
 
-        add(controlPanel, BorderLayout.SOUTH);
 
-        addVertexButton.addActionListener(e -> {
-            graphPanel.setMode(EditorMode.ADD_VERTEX);
-        });
+        JSplitPane rightSplit = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                controlPanel,
+                logPanel
+        );
 
-        addEdgeButton.addActionListener(e -> {
-            graphPanel.setMode(EditorMode.ADD_EDGE);
-        });
+        rightSplit.setResizeWeight(0.25);
+        rightSplit.setDividerLocation(180);
 
-        deleteVertexButton.addActionListener(e -> {
-            graphPanel.setMode(EditorMode.DELETE_VERTEX);
-        });
 
-        deleteEdgeButton.addActionListener(e -> {
-            graphPanel.setMode(EditorMode.DELETE_EDGE);
-        });
+        JSplitPane topSplit = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                graphPanel,
+                rightSplit
+        );
 
-        cancelButton.addActionListener(e -> {
+        topSplit.setResizeWeight(0.8);
+        topSplit.setDividerLocation(850);
+
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+
+        bottomPanel.add(toolPanel, BorderLayout.WEST);
+
+        JSplitPane mainSplit = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                topSplit,
+                bottomPanel
+        );
+
+        mainSplit.setResizeWeight(0.85);
+        mainSplit.setDividerLocation(650);
+
+        add(mainSplit);
+
+
+        toolPanel.getAddVertexButton().addActionListener(e ->
+                toggleMode(EditorMode.ADD_VERTEX,
+                        toolPanel.getAddVertexButton()));
+
+        toolPanel.getAddEdgeButton().addActionListener(e ->
+                toggleMode(EditorMode.ADD_EDGE,
+                        toolPanel.getAddEdgeButton()));
+
+        toolPanel.getDeleteVertexButton().addActionListener(e ->
+                toggleMode(EditorMode.DELETE_VERTEX,
+                        toolPanel.getDeleteVertexButton()));
+
+        toolPanel.getDeleteEdgeButton().addActionListener(e ->
+                toggleMode(EditorMode.DELETE_EDGE,
+                        toolPanel.getDeleteEdgeButton()));
+    }
+
+    /**
+     * Переключение режима редактора.
+     */
+    private void toggleMode(EditorMode mode, JButton button) {
+
+        if (graphPanel.getMode() == mode) {
+
             graphPanel.setMode(EditorMode.NONE);
-        });
+
+            resetActiveButton();
+
+            return;
+        }
+
+        graphPanel.setMode(mode);
+
+        setActiveButton(button);
+    }
+
+    /**
+     * Подсветка выбранной кнопки.
+     */
+    private void setActiveButton(JButton button) {
+
+        resetActiveButton();
+
+        activeButton = button;
+
+        activeButton.setBackground(Color.GREEN);
+    }
+
+    /**
+     * Снять подсветку.
+     */
+    private void resetActiveButton() {
+
+        if (activeButton != null) {
+
+            activeButton.setBackground(null);
+            activeButton.repaint();
+
+            activeButton = null;
+        }
+    }
+
+    @Override
+    public void modeFinished() {
+
+        graphPanel.setMode(EditorMode.NONE);
+
+        resetActiveButton();
+
     }
 }
