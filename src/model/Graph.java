@@ -28,9 +28,6 @@ public class Graph {
     }
 
     public Edge addEdge(Vertex from, Vertex to, double weight) {
-        if (weight <= 0) {
-            throw new IllegalArgumentException("weight must be positive");
-        }
         Edge edge = new Edge(from, to, weight);
         edges.add(edge);
         return edge;

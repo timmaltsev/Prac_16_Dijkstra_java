@@ -1,0 +1,9 @@
+package ui;
+
+public enum EditorMode {
+    NONE,
+    ADD_VERTEX,
+    ADD_EDGE,
+    DELETE_VERTEX,
+    DELETE_EDGE
+}
