@@ -60,8 +60,7 @@ public class DijkstraAlgorithm {
         Vertex next = findClosestUnvisited();
 
         if (next == null || distances.get(next) == Double.POSITIVE_INFINITY) {
-            finished = true;
-            currentVertex = null;
+            finishAlgorithm();
             return false;
         }
 
@@ -73,9 +72,9 @@ public class DijkstraAlgorithm {
         visited.add(next);
         addLog("Очередь: " + formatQueue());
         addLog("Путь: " + formatPath(next));
-        for (Edge edge : graph.getIncidentEdges(next)) {
-
-            Vertex neighbor = edge.getOtherEnd(next);
+        for (Edge edge : graph.getOutgoingEdges(next)) {
+            
+            Vertex neighbor = edge.getTo();
 
             if (visited.contains(neighbor)) {
                 continue;
@@ -106,7 +105,7 @@ public class DijkstraAlgorithm {
         addLog("");
 
         if (visited.size() == graph.getVertices().size()) {
-            finished = true;
+            finishAlgorithm();
         }
 
         return true;
@@ -257,4 +256,43 @@ public class DijkstraAlgorithm {
 
         return result;
     }
+
+    private void finishAlgorithm() {
+
+        finished = true;
+        currentVertex = null;
+
+        addLog("");
+        addLog("Алгоритм завершен.");
+
+        if (visited.size() == graph.getVertices().size()) {
+            addLog("Все вершины графа были достигнуты.");
+        } else {
+            addLog("Граф полностью не достижим из стартовой вершины.");
+            addLog("Посещено вершин: "
+                    + visited.size()
+                    + " из "
+                    + graph.getVertices().size());
+        }
+
+        addLog("");
+        addLog("Итоговые кратчайшие расстояния:");
+
+        List<Vertex> vertices = new ArrayList<>(graph.getVertices());
+        vertices.sort((v1, v2) -> v1.getName().compareTo(v2.getName()));
+
+        for (Vertex vertex : vertices) {
+
+            double distance = distances.get(vertex);
+
+            if (Double.isInfinite(distance)) {
+                addLog(vertex.getName() + " : недостижима");
+            } else {
+                addLog(vertex.getName() + " : " + distance);
+            }
+        }
+
+    }
 }
+
+
