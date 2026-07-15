@@ -73,9 +73,9 @@ public class DijkstraAlgorithm {
         visited.add(next);
         addLog("Очередь: " + formatQueue());
         addLog("Путь: " + formatPath(next));
-        for (Edge edge : graph.getIncidentEdges(next)) {
 
-            Vertex neighbor = edge.getOtherEnd(next);
+        for (Edge edge : graph.getOutgoingEdges(next)) {
+            Vertex neighbor = edge.getTo();
 
             if (visited.contains(neighbor)) {
                 continue;

@@ -109,4 +109,16 @@ public class Graph {
         }
         return null;
     }
+
+    public List<Edge> getOutgoingEdges(Vertex vertex) {
+        List<Edge> result = new ArrayList<>();
+
+        for (Edge edge : edges) {
+            if (edge.getFrom().equals(vertex)) {
+                result.add(edge);
+            }
+        }
+
+        return result;
+    }
 }
