@@ -113,10 +113,16 @@ public class GraphPanel extends JPanel {
         if (name.isEmpty())
             return;
 
-        if (graph.findVertexByName(name) != null)
-            return;
 
-        graph.addVertex(name, x, y);
+        try { graph.addVertex(name, x, y); }
+        catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
 
         if (listener != null) {
             listener.modeFinished();
@@ -165,10 +171,22 @@ public class GraphPanel extends JPanel {
             }
 
             repaint();
-
         }
         catch (NumberFormatException ex) {
-
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Вес должен быть числом.",
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+        catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
