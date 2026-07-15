@@ -1,6 +1,8 @@
 package ui;
 
 import model.Graph;
+import model.Vertex;
+import algorithm.DijkstraAlgorithm;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,13 +17,16 @@ public class MainFrame extends JFrame
     private final ControlPanel controlPanel;
     private final LogPanel logPanel;
 
+    private DijkstraAlgorithm algorithm;
+    // private AlgorithmMode algorithmMode;
+
     private JButton activeButton = null;
 
     public MainFrame(Graph graph) {
 
         this.graph = graph;
 
-        setTitle("Прототип");
+        setTitle("Версия 1");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -87,28 +92,14 @@ public class MainFrame extends JFrame
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
 
-        controlPanel.getStartButton().addActionListener(e -> {
+        toolPanel.getNextStepButton().addActionListener(e ->
+                makeAlgorithmStep()
+        );
 
-            AlgorithmDialog dialog =
-                    new AlgorithmDialog(this);
+        controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
 
-            dialog.setVisible(true);
 
-            AlgorithmMode mode =
-                    dialog.getSelectedMode();
-
-            if (mode == null)
-                return;
-
-            if (mode == AlgorithmMode.INSTANT) {
-
-            }
-            
-            else {
-
-            }
-
-        });
+        graphPanel.setEditorListener(this);
     }
 
     /**
@@ -164,4 +155,115 @@ public class MainFrame extends JFrame
         resetActiveButton();
 
     }
+
+    @Override
+    public void sourceVertexSelected(Vertex sourceVertex){
+
+        startAlgorithm(sourceVertex);
+    }
+
+    private void prepareAlgorithm() {
+        if (graph.getVertices().isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Граф пуст.",
+                    "Ошибка",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (graph.getVertices().isEmpty()) {
+            logPanel.log("Граф пуст.");
+            return;
+        }
+
+        if (graphPanel.getMode() == EditorMode.SELECT_SOURCE) {
+
+            modeFinished();
+
+            logPanel.log("Запуск алгоритма отменён.");
+
+            return;
+        }
+
+        graphPanel.setMode(EditorMode.SELECT_SOURCE);
+
+        setActiveButton(controlPanel.getStartButton());
+
+        logPanel.log("Выберите начальную вершину.");
+    }
+
+    private void startAlgorithm(Vertex sourceVertex) {
+
+        AlgorithmDialog dialog = new AlgorithmDialog(this);
+        dialog.setVisible(true);
+
+        AlgorithmMode mode = dialog.getSelectedMode();
+
+        if (mode == null) {
+            return; // пользователь нажал "Отмена"
+        }
+
+        algorithm = new DijkstraAlgorithm(graph, sourceVertex);
+
+        if (mode == AlgorithmMode.INSTANT) {
+
+            algorithm.runToCompletion();
+
+            logPanel.showAlgorithmResult(algorithm);
+
+            finishAlgorithm();
+
+        } else {
+
+            logPanel.log("Алгоритм готов к выполнению.");
+            logPanel.log("Нажмите \"Следующий шаг\" - \"→\".");
+        }
+
+    }
+
+    public void makeAlgorithmStep(){
+
+        if (algorithm.isFinished()) {
+            finishAlgorithm();
+            return;
+        }
+
+        algorithm.step();
+        logPanel.logMultiple(algorithm.consumeLog());
+    }
+
+    private void finishAlgorithm() {
+
+        JOptionPane.showMessageDialog(
+                    this,
+                    "Алгоритм выполнен.");
+
+        modeFinished();
+    }
+
+    // private Vertex chooseSourceVertex() {
+
+    //     Object[] names =
+    //             graph.getVertices()
+    //                     .stream()
+    //                     .map(Vertex::getName)
+    //                     .toArray();
+
+    //     Object result =
+    //             JOptionPane.showInputDialog(
+    //                     this,
+    //                     "Выберите начальную вершину",
+    //                     "Алгоритм Дейкстры",
+    //                     JOptionPane.QUESTION_MESSAGE,
+    //                     null,
+    //                     names,
+    //                     names[0]);
+
+    //     if (result == null)
+    //         return null;
+
+    //     return graph.findVertexByName(result.toString());
+
+    // }
 }
