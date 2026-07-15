@@ -14,15 +14,14 @@ import java.awt.event.MouseEvent;
 
 public class GraphPanel extends JPanel {
 
-    private final Graph graph;
-
-    // private DijkstraAlgorithm algorithm;
+    private Graph graph;
 
     private EditorMode mode = EditorMode.NONE;
 
     private EditorListener listener;
 
     private Vertex firstVertex = null;
+    private Vertex sourceVertex = null;
 
     private static final int RADIUS = 20;
 
@@ -42,6 +41,13 @@ public class GraphPanel extends JPanel {
             }
         });
 
+    }
+
+    public void setGraph(Graph graph) {
+
+        this.graph = graph;
+        
+        repaint();
     }
 
     public void setEditorListener(EditorListener listener) {
@@ -82,6 +88,11 @@ public class GraphPanel extends JPanel {
             case DELETE_EDGE:
 
                 deleteEdge(x, y);
+                break;
+
+            case SELECT_SOURCE:
+
+                setSource(x, y);
                 break;
 
             default:
@@ -203,7 +214,26 @@ public class GraphPanel extends JPanel {
         }
 
         repaint();
+    }
 
+    private void setSource(int x, int y){
+
+        sourceVertex = findVertex(x, y);
+
+        if (sourceVertex == null)
+            return;
+
+        if (listener != null) {
+            listener.sourceVertexSelected(sourceVertex);
+        }
+
+        repaint();
+    }
+
+    public void clear(){
+
+        sourceVertex = null;
+        repaint();
     }
 
     /**
@@ -356,6 +386,8 @@ public class GraphPanel extends JPanel {
 
             if (vertex.equals(firstVertex))
                 g2.setColor(Color.RED);
+            else if (vertex.equals(sourceVertex))
+                g2.setColor(new Color(0, 128, 255));
             else
                 g2.setColor(new Color(255, 180, 0));
 
@@ -392,5 +424,7 @@ public class GraphPanel extends JPanel {
     //     repaint();
 
     // }
+
+    
 
 }

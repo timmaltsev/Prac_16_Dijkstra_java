@@ -9,6 +9,7 @@ import java.util.List;
  * по плану прототипа это только структура данных.
  */
 public class Graph {
+    public static final double MIN_VERTEX_DISTANCE = 50;
     private final List<Vertex> vertices = new ArrayList<>();
     private final List<Edge> edges = new ArrayList<>();
 

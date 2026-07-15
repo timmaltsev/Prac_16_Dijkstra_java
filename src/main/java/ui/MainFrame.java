@@ -3,6 +3,7 @@ package ui;
 import model.Graph;
 import model.Vertex;
 import algorithm.DijkstraAlgorithm;
+import input.JsonLoader;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +11,8 @@ import java.awt.*;
 public class MainFrame extends JFrame
                        implements EditorListener {
 
-    private final Graph graph;
+    private Graph graph;
+    private final JsonLoader loader;
 
     private final GraphPanel graphPanel;
     private final ToolPanel toolPanel;
@@ -18,13 +20,13 @@ public class MainFrame extends JFrame
     private final LogPanel logPanel;
 
     private DijkstraAlgorithm algorithm;
-    // private AlgorithmMode algorithmMode;
 
     private JButton activeButton = null;
 
     public MainFrame(Graph graph) {
 
         this.graph = graph;
+        this.loader = new JsonLoader();
 
         setTitle("Версия 1");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -92,7 +94,18 @@ public class MainFrame extends JFrame
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
 
-        controlPanel.getStartButton().addActionListener(e -> startAlgorithm());
+        toolPanel.getNextStepButton().addActionListener(e ->
+                makeAlgorithmStep()
+        );
+
+        controlPanel.getLoadButton().addActionListener(e -> loadGraph());
+
+        controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
+
+        controlPanel.getClearButton().addActionListener(e -> clearGraph());
+
+
+        graphPanel.setEditorListener(this);
     }
 
     /**
@@ -149,8 +162,13 @@ public class MainFrame extends JFrame
 
     }
 
-    private void startAlgorithm() {
+    @Override
+    public void sourceVertexSelected(Vertex sourceVertex){
 
+        startAlgorithm(sourceVertex);
+    }
+
+    private void prepareAlgorithm() {
         if (graph.getVertices().isEmpty()) {
             JOptionPane.showMessageDialog(
                     this,
@@ -159,6 +177,29 @@ public class MainFrame extends JFrame
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        if (graph.getVertices().isEmpty()) {
+            logPanel.log("Граф пуст.");
+            return;
+        }
+
+        if (graphPanel.getMode() == EditorMode.SELECT_SOURCE) {
+
+            modeFinished();
+
+            logPanel.log("Запуск алгоритма отменён.");
+
+            return;
+        }
+
+        graphPanel.setMode(EditorMode.SELECT_SOURCE);
+
+        setActiveButton(controlPanel.getStartButton());
+
+        logPanel.log("Выберите начальную вершину.");
+    }
+
+    private void startAlgorithm(Vertex sourceVertex) {
 
         AlgorithmDialog dialog = new AlgorithmDialog(this);
         dialog.setVisible(true);
@@ -169,84 +210,80 @@ public class MainFrame extends JFrame
             return; // пользователь нажал "Отмена"
         }
 
-        Object[] vertexNames = graph.getVertices()
-                .stream()
-                .map(Vertex::getName)
-                .toArray();
-
-        Object selected = JOptionPane.showInputDialog(
-                this,
-                "Выберите начальную вершину:",
-                "Начальная вершина",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                vertexNames,
-                vertexNames[0]);
-
-        if (selected == null) {
-            return; // пользователь отменил выбор вершины
-        }
-
-        Vertex source = graph.findVertexByName(selected.toString());
-
-        if (source == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Не удалось найти выбранную вершину.",
-                    "Ошибка",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        algorithm = new DijkstraAlgorithm(graph, source);
+        algorithm = new DijkstraAlgorithm(graph, sourceVertex);
 
         if (mode == AlgorithmMode.INSTANT) {
 
             algorithm.runToCompletion();
 
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Алгоритм выполнен.");
+            logPanel.showAlgorithmResult(algorithm);
 
-            // Позже здесь будет:
-            // logPanel.showAlgorithmResult(algorithm);
+            finishAlgorithm();
 
         } else {
 
-            algorithm.step();
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Выполнен первый шаг алгоритма.\n"
-                            + "Дальнейшее выполнение будет осуществляться кнопкой \"Следующий шаг\".");
-
-            // Позже здесь будет обновление интерфейса
+            logPanel.log("Алгоритм готов к выполнению.");
+            logPanel.log("Нажмите \"Следующий шаг\" - \"→\".");
         }
 
     }
 
-    private Vertex chooseSourceVertex() {
+    public void makeAlgorithmStep(){
 
-        Object[] names =
-                graph.getVertices()
-                        .stream()
-                        .map(Vertex::getName)
-                        .toArray();
+        if (algorithm.isFinished()) {
+            finishAlgorithm();
+            return;
+        }
 
-        Object result =
-                JOptionPane.showInputDialog(
-                        this,
-                        "Выберите начальную вершину",
-                        "Алгоритм Дейкстры",
-                        JOptionPane.QUESTION_MESSAGE,
-                        null,
-                        names,
-                        names[0]);
+        algorithm.step();
+        logPanel.logMultiple(algorithm.consumeLog());
+    }
 
-        if (result == null)
-            return null;
+    private void finishAlgorithm() {
 
-        return graph.findVertexByName(result.toString());
+        JOptionPane.showMessageDialog(
+                    this,
+                    "Алгоритм выполнен.");
+
+        modeFinished();
+    }
+
+    private void clearGraph() {
+
+        graphPanel.clear();
+    }
+
+    private void loadGraph() {
+
+        JFileChooser chooser = new JFileChooser();
+
+        if (chooser.showOpenDialog(this)
+                != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        try {
+
+            graph = loader.load(
+                    chooser.getSelectedFile(),
+                    graphPanel.getSize());
+
+            graphPanel.setGraph(graph);
+
+            graphPanel.repaint();
+
+            logPanel.log("Граф успешно загружен.");
+
+        }
+        catch (Exception ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE);
+
+        }
 
     }
 }
