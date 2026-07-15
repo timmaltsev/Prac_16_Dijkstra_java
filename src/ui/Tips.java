@@ -31,7 +31,7 @@ public final class Tips {
 
         JOptionPane.showMessageDialog(
                 parent,
-                "Щёлкните по свободному месту на графе, чтобы удалить вершину.",
+                "Щёлкните по вершине на графе, чтобы удалить ее.",
                 "Удаление вершины",
                 JOptionPane.INFORMATION_MESSAGE);
 
@@ -57,8 +57,8 @@ public final class Tips {
 
         JOptionPane.showMessageDialog(
                 parent,
-                "Выберите сначала выберите начало и конец ребра, потом укажите вес ребра",
-                "Добавление ребра",
+                "Кликните на ребро, которое хотите удалить",
+                "Удаление ребра",
                 JOptionPane.INFORMATION_MESSAGE);
 
         deleteEdgeShown = true;
