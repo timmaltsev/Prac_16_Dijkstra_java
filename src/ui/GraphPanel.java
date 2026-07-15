@@ -22,6 +22,33 @@ public class GraphPanel extends JPanel {
     private static final int RADIUS = 20;
 
     private static final int EDGE_TOLERANCE = 8;
+    /* для того, чтобы кликать, выбирая source */
+    private Vertex selectedSource = null;
+    private VertexSelectionListener selectionListener;
+    
+    public void setSelectionListener(VertexSelectionListener listener) {
+        this.selectionListener = listener;
+    }
+
+    private void selectSource(int x, int y) {
+        Vertex vertex = findVertex(x, y);
+
+        if (vertex == null) {
+            return;
+        }
+
+        selectedSource = vertex;
+
+        if (selectionListener != null) {
+            selectionListener.sourceSelected(vertex);
+        }
+
+        if (listener != null) {
+            listener.modeFinished();
+        }
+
+        repaint();
+    }
 
     public GraphPanel(Graph graph) {
 
@@ -60,7 +87,6 @@ public class GraphPanel extends JPanel {
         switch (mode) {
 
             case ADD_VERTEX:
-
                 addVertex(x, y);
                 break;
 
@@ -77,6 +103,11 @@ public class GraphPanel extends JPanel {
             case DELETE_EDGE:
 
                 deleteEdge(x, y);
+                break;
+
+            case SELECT_SOURCE:
+
+                selectSource(x, y);
                 break;
 
             default:
@@ -102,10 +133,15 @@ public class GraphPanel extends JPanel {
         if (name.isEmpty())
             return;
 
-        if (graph.findVertexByName(name) != null)
-            return;
-
-        graph.addVertex(name, x, y);
+        try { graph.addVertex(name, x, y); }
+        catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
 
         if (listener != null) {
             listener.modeFinished();
@@ -154,10 +190,22 @@ public class GraphPanel extends JPanel {
             }
 
             repaint();
-
         }
         catch (NumberFormatException ex) {
-
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Вес должен быть числом.",
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+        catch (IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
@@ -349,7 +397,9 @@ public class GraphPanel extends JPanel {
             int x = vertex.getX();
             int y = vertex.getY();
 
-            if (vertex.equals(firstVertex))
+            if (vertex.equals(selectedSource))
+                g2.setColor(Color.GREEN);
+            else if (vertex.equals(firstVertex))
                 g2.setColor(Color.RED);
             else
                 g2.setColor(new Color(255, 180, 0));

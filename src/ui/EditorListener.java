@@ -1,7 +1,6 @@
 package ui;
 
 public interface EditorListener {
-
     /**
      * Завершение текущего режима.
      */

@@ -5,5 +5,6 @@ public enum EditorMode {
     ADD_VERTEX,
     ADD_EDGE,
     DELETE_VERTEX,
-    DELETE_EDGE
+    DELETE_EDGE,
+    SELECT_SOURCE
 }
