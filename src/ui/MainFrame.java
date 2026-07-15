@@ -76,21 +76,30 @@ public class MainFrame extends JFrame
         add(mainSplit);
 
 
-        toolPanel.getAddVertexButton().addActionListener(e ->
-                toggleMode(EditorMode.ADD_VERTEX,
-                        toolPanel.getAddVertexButton()));
 
-        toolPanel.getAddEdgeButton().addActionListener(e ->
-                toggleMode(EditorMode.ADD_EDGE,
-                        toolPanel.getAddEdgeButton()));
+        toolPanel.getAddVertexButton().addActionListener(e -> {
+            Tips.showAddVertex(this);
+            toggleMode(EditorMode.ADD_VERTEX,
+                    toolPanel.getAddVertexButton());
+        });
 
-        toolPanel.getDeleteVertexButton().addActionListener(e ->
-                toggleMode(EditorMode.DELETE_VERTEX,
-                        toolPanel.getDeleteVertexButton()));
+        toolPanel.getAddEdgeButton().addActionListener(e -> {
+            Tips.showAddEdge(this);
+            toggleMode(EditorMode.ADD_EDGE,
+                    toolPanel.getAddEdgeButton());
+        });
 
-        toolPanel.getDeleteEdgeButton().addActionListener(e ->
-                toggleMode(EditorMode.DELETE_EDGE,
-                        toolPanel.getDeleteEdgeButton()));
+        toolPanel.getDeleteVertexButton().addActionListener(e -> {
+            Tips.showDeleteVertex(this);
+            toggleMode(EditorMode.DELETE_VERTEX,
+                    toolPanel.getDeleteVertexButton());
+        });
+
+        toolPanel.getDeleteEdgeButton().addActionListener(e -> {
+            Tips.showDeleteEdge(this);
+            toggleMode(EditorMode.DELETE_EDGE,
+                    toolPanel.getDeleteEdgeButton());
+        });
 
         toolPanel.getNextStepButton().addActionListener(e ->
                 makeAlgorithmStep()
