@@ -5,6 +5,9 @@ import model.Graph;
 import model.Vertex;
 
 import javax.swing.*;
+
+// import algorithm.DijkstraAlgorithm;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -12,6 +15,8 @@ import java.awt.event.MouseEvent;
 public class GraphPanel extends JPanel {
 
     private final Graph graph;
+
+    // private DijkstraAlgorithm algorithm;
 
     private EditorMode mode = EditorMode.NONE;
 
@@ -379,5 +384,13 @@ public class GraphPanel extends JPanel {
         }
 
     }
+
+    // public void setAlgorithm(DijkstraAlgorithm algorithm) {
+
+    //     this.algorithm = algorithm;
+
+    //     repaint();
+
+    // }
 
 }
