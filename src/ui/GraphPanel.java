@@ -6,7 +6,6 @@ import model.Vertex;
 
 import javax.swing.*;
 
-// import algorithm.DijkstraAlgorithm;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -16,7 +15,6 @@ public class GraphPanel extends JPanel {
 
     private final Graph graph;
 
-    // private DijkstraAlgorithm algorithm;
 
     private EditorMode mode = EditorMode.NONE;
 
@@ -28,35 +26,6 @@ public class GraphPanel extends JPanel {
     private static final int RADIUS = 20;
 
     private static final int EDGE_TOLERANCE = 8;
-    /* для того, чтобы кликать, выбирая source */
-    private Vertex selectedSource = null;
-    private VertexSelectionListener selectionListener;
-
-    public void setSelectionListener(VertexSelectionListener listener) {
-        this.selectionListener = listener;
-    }
-
-/*
-    private void selectSource(int x, int y) {
-        Vertex vertex = findVertex(x, y);
-
-        if (vertex == null) {
-            return;
-        }
-
-        selectedSource = vertex;
-
-        if (selectionListener != null) {
-            selectionListener.sourceSelected(vertex);
-        }
-
-        if (listener != null) {
-            listener.modeFinished();
-        }
-
-        repaint();
-    }
-*/
 
     public GraphPanel(Graph graph) {
 
@@ -114,9 +83,7 @@ public class GraphPanel extends JPanel {
                 break;
 
             case SELECT_SOURCE:
-
-                setSource(x, y);
-                // selectSource(x, y);
+                selectSource(x, y);
                 break;
 
             default:
@@ -257,18 +224,14 @@ public class GraphPanel extends JPanel {
         repaint();
     }
 
-    public void setSource(int x, int y){
+    private void selectSource(int x, int y) {
         sourceVertex = findVertex(x, y);
 
-        if (sourceVertex == null)
+        if (sourceVertex == null) {
             return;
+        }
 
         if (listener != null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "вершина.",
-                    "Ошибка",
-                    JOptionPane.WARNING_MESSAGE);
             listener.sourceVertexSelected(sourceVertex);
         }
 
@@ -423,9 +386,7 @@ public class GraphPanel extends JPanel {
             int x = vertex.getX();
             int y = vertex.getY();
 
-            if (vertex.equals(selectedSource))
-                g2.setColor(Color.GREEN);
-            else if (vertex.equals(firstVertex))
+            if (vertex.equals(firstVertex))
                 g2.setColor(Color.RED);
             else if (vertex.equals(sourceVertex))
                 g2.setColor(new Color(0, 128, 255));

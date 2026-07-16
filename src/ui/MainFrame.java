@@ -3,13 +3,11 @@ package ui;
 import algorithm.DijkstraAlgorithm;
 import model.Graph;
 import model.Vertex;
-import algorithm.DijkstraAlgorithm;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class MainFrame extends JFrame
-        implements EditorListener {
+public class MainFrame extends JFrame implements EditorListener {
 
     private final Graph graph;
 
@@ -22,9 +20,9 @@ public class MainFrame extends JFrame
 
     private AlgorithmMode algorithmMode;
     private DijkstraAlgorithm algorithm;
+    private boolean graphEditingLocked = false;
 
     public MainFrame(Graph graph) {
-
         this.graph = graph;
 
         setTitle("Версия 1");
@@ -38,28 +36,6 @@ public class MainFrame extends JFrame
         toolPanel = new ToolPanel();
         controlPanel = new ControlPanel();
         logPanel = new LogPanel();
-
-        graphPanel.setSelectionListener(source -> {
-
-            algorithm = new DijkstraAlgorithm(graph, source);
-
-            logPanel.clear();
-
-            if (algorithmMode == AlgorithmMode.INSTANT) {
-
-                algorithm.runToCompletion();
-
-            } else {
-
-                algorithm.step();
-            }
-
-            for (String message : algorithm.consumeLog()) {
-                logPanel.log(message);
-            }
-
-            graphPanel.repaint();
-        });
 
         JSplitPane rightSplit = new JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
@@ -92,72 +68,38 @@ public class MainFrame extends JFrame
 
         toolPanel.getAddVertexButton().addActionListener(e -> {
             Tips.showAddVertex(this);
-            toggleMode(EditorMode.ADD_VERTEX,
-                    toolPanel.getAddVertexButton());
+            toggleMode(EditorMode.ADD_VERTEX, toolPanel.getAddVertexButton());
         });
 
         toolPanel.getAddEdgeButton().addActionListener(e -> {
             Tips.showAddEdge(this);
-            toggleMode(EditorMode.ADD_EDGE,
-                    toolPanel.getAddEdgeButton());
+            toggleMode(EditorMode.ADD_EDGE, toolPanel.getAddEdgeButton());
         });
 
         toolPanel.getDeleteVertexButton().addActionListener(e -> {
             Tips.showDeleteVertex(this);
-            toggleMode(EditorMode.DELETE_VERTEX,
-                    toolPanel.getDeleteVertexButton());
+            toggleMode(EditorMode.DELETE_VERTEX, toolPanel.getDeleteVertexButton());
         });
 
         toolPanel.getDeleteEdgeButton().addActionListener(e -> {
             Tips.showDeleteEdge(this);
-            toggleMode(EditorMode.DELETE_EDGE,
-                    toolPanel.getDeleteEdgeButton());
+            toggleMode(EditorMode.DELETE_EDGE, toolPanel.getDeleteEdgeButton());
         });
 
-        controlPanel.getStartButton().addActionListener(e -> {
-
-            AlgorithmDialog dialog = new AlgorithmDialog(this);
-            dialog.setVisible(true);
-
-            algorithmMode = dialog.getSelectedMode();
-
-            if (algorithmMode == null) {
-                return;
-            }
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Щёлкните по стартовой вершине.");
-
-            graphPanel.setMode(EditorMode.SELECT_SOURCE);
-        });
-
-        toolPanel.getNextStepButton().addActionListener(e -> {
-
-            if (algorithm == null)
-                return;
-
-            if (algorithm.step()) {
-                for (String message : algorithm.consumeLog()) {
-                    logPanel.log(message);
-                }
-                graphPanel.repaint();
-            } else {
-                logPanel.log("Алгоритм завершён.");
-            }
-        });
-
-/*
-        toolPanel.getNextStepButton().addActionListener(e ->
-                makeAlgorithmStep()
-        );
-*/
         controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
-
-        graphPanel.setEditorListener(this);
+        toolPanel.getNextStepButton().addActionListener(e -> makeAlgorithmStep());
+        toolPanel.getPreviousStepButton().addActionListener(e -> makeAlgorithmStepBack());
     }
 
     private void toggleMode(EditorMode mode, JButton button) {
+        if (graphEditingLocked) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Нельзя изменять граф, пока алгоритм выполняется в пошаговом режиме.",
+                    "Алгоритм выполняется",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
         if (graphPanel.getMode() == mode) {
             graphPanel.setMode(EditorMode.NONE);
@@ -170,7 +112,6 @@ public class MainFrame extends JFrame
     }
 
     private void setActiveButton(JButton button) {
-
         resetActiveButton();
 
         activeButton = button;
@@ -178,30 +119,36 @@ public class MainFrame extends JFrame
     }
 
     private void resetActiveButton() {
-
-        if (activeButton == null)
+        if (activeButton == null) {
             return;
+        }
 
         activeButton.setBackground(null);
         activeButton.repaint();
-
         activeButton = null;
     }
 
     @Override
     public void modeFinished() {
-
         graphPanel.setMode(EditorMode.NONE);
         resetActiveButton();
     }
 
     @Override
-    public void sourceVertexSelected(Vertex sourceVertex){
-
+    public void sourceVertexSelected(Vertex sourceVertex) {
         startAlgorithm(sourceVertex);
     }
 
     private void prepareAlgorithm() {
+        if (graphEditingLocked) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Завершите пошаговое выполнение алгоритма перед новым запуском.",
+                    "Алгоритм выполняется",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         if (graph.getVertices().isEmpty()) {
             JOptionPane.showMessageDialog(
                     this,
@@ -211,97 +158,82 @@ public class MainFrame extends JFrame
             return;
         }
 
-        if (graph.getVertices().isEmpty()) {
-            logPanel.log("Граф пуст.");
-            return;
-        }
-
         if (graphPanel.getMode() == EditorMode.SELECT_SOURCE) {
-
             modeFinished();
-
             logPanel.log("Запуск алгоритма отменён.");
-
             return;
         }
-
-        graphPanel.setMode(EditorMode.SELECT_SOURCE);
-
-        setActiveButton(controlPanel.getStartButton());
-
-        logPanel.log("Выберите начальную вершину.");
-    }
-
-    private void startAlgorithm(Vertex sourceVertex) {
 
         AlgorithmDialog dialog = new AlgorithmDialog(this);
         dialog.setVisible(true);
 
-        AlgorithmMode mode = dialog.getSelectedMode();
-
-        if (mode == null) {
-            return; // пользователь нажал "Отмена"
-        }
-
-        algorithm = new DijkstraAlgorithm(graph, sourceVertex);
-
-        if (mode == AlgorithmMode.INSTANT) {
-
-            algorithm.runToCompletion();
-
-            logPanel.showAlgorithmResult(algorithm);
-
-            finishAlgorithm();
-
-        } else {
-
-            logPanel.log("Алгоритм готов к выполнению.");
-            logPanel.log("Нажмите \"Следующий шаг\" - \"→\".");
-        }
-
-    }
-
-    public void makeAlgorithmStep(){
-
-        if (algorithm.isFinished()) {
-            finishAlgorithm();
+        algorithmMode = dialog.getSelectedMode();
+        if (algorithmMode == null) {
             return;
         }
-algorithm.step();
-        logPanel.logMultiple(algorithm.consumeLog());
+
+        graphPanel.setMode(EditorMode.SELECT_SOURCE);
+        setActiveButton(controlPanel.getStartButton());
+        logPanel.log("Выберите начальную вершину.");
+    }
+
+    private void startAlgorithm(Vertex sourceVertex) {
+        algorithm = new DijkstraAlgorithm(graph, sourceVertex);
+        logPanel.clear();
+        logPanel.log("Начальная вершина: " + sourceVertex.getName());
+
+        if (algorithmMode == AlgorithmMode.INSTANT) {
+            algorithm.runToCompletion();
+            logPanel.showAlgorithmResult(algorithm);
+            finishAlgorithm();
+        } else {
+            setGraphEditingLocked(true);
+            algorithm.step();
+            logPanel.showAlgorithmResult(algorithm);
+        }
+
+        modeFinished();
+        graphPanel.repaint();
+    }
+
+    public void makeAlgorithmStep() {
+        if (algorithm == null) {
+            return;
+        }
+
+        if (algorithm.step()) {
+            logPanel.logMultiple(algorithm.consumeLog());
+            graphPanel.repaint();
+            return;
+        }
+
+        finishAlgorithm();
+    }
+
+    private void makeAlgorithmStepBack() {
+        if (algorithm == null) {
+            return;
+        }
+
+        if (algorithm.stepBack()) {
+            logPanel.logMultiple(algorithm.consumeLog());
+            graphPanel.repaint();
+        }
     }
 
     private void finishAlgorithm() {
-
-        JOptionPane.showMessageDialog(
-                    this,
-                    "Алгоритм выполнен.");
-
+        logPanel.log("Алгоритм завершён.");
+        JOptionPane.showMessageDialog(this, "Алгоритм выполнен.");
+        setGraphEditingLocked(false);
+        algorithm = null;
         modeFinished();
     }
 
-    // private Vertex chooseSourceVertex() {
-
-    //     Object[] names =
-    //             graph.getVertices()
-    //                     .stream()
-    //                     .map(Vertex::getName)
-    //                     .toArray();
-
-    //     Object result =
-    //             JOptionPane.showInputDialog(
-    //                     this,
-    //                     "Выберите начальную вершину",
-    //                     "Алгоритм Дейкстры",
-    //                     JOptionPane.QUESTION_MESSAGE,
-    //                     null,
-    //                     names,
-    //                     names[0]);
-
-    //     if (result == null)
-    //         return null;
-
-    //     return graph.findVertexByName(result.toString());
-
-    // }
+    private void setGraphEditingLocked(boolean locked) {
+        graphEditingLocked = locked;
+        toolPanel.getAddVertexButton().setEnabled(!locked);
+        toolPanel.getAddEdgeButton().setEnabled(!locked);
+        toolPanel.getDeleteVertexButton().setEnabled(!locked);
+        toolPanel.getDeleteEdgeButton().setEnabled(!locked);
+    }
 }
