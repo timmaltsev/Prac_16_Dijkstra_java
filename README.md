@@ -1,2 +1,2 @@
-# Dijkstra_vis_java
-Project of brigade 16
+# Визуализация алгоритма Дейкстры
+Проект бригады №16.
