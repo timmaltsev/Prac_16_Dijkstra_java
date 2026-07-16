@@ -1,5 +1,6 @@
 package ui;
 
+import algorithm.DijkstraAlgorithm;
 import model.Graph;
 import model.Vertex;
 import algorithm.DijkstraAlgorithm;
@@ -8,7 +9,7 @@ import javax.swing.*;
 import java.awt.*;
 
 public class MainFrame extends JFrame
-                       implements EditorListener {
+        implements EditorListener {
 
     private final Graph graph;
 
@@ -17,10 +18,10 @@ public class MainFrame extends JFrame
     private final ControlPanel controlPanel;
     private final LogPanel logPanel;
 
-    private DijkstraAlgorithm algorithm;
-    // private AlgorithmMode algorithmMode;
-
     private JButton activeButton = null;
+
+    private AlgorithmMode algorithmMode;
+    private DijkstraAlgorithm algorithm;
 
     public MainFrame(Graph graph) {
 
@@ -31,37 +32,52 @@ public class MainFrame extends JFrame
         setSize(1200, 800);
         setLocationRelativeTo(null);
 
-        graphPanel = new GraphPanel(this.graph);
+        graphPanel = new GraphPanel(graph);
+        graphPanel.setEditorListener(this);
 
         toolPanel = new ToolPanel();
-
         controlPanel = new ControlPanel();
-
         logPanel = new LogPanel();
 
+        graphPanel.setSelectionListener(source -> {
+
+            algorithm = new DijkstraAlgorithm(graph, source);
+
+            logPanel.clear();
+
+            if (algorithmMode == AlgorithmMode.INSTANT) {
+
+                algorithm.runToCompletion();
+
+            } else {
+
+                algorithm.step();
+            }
+
+            for (String message : algorithm.consumeLog()) {
+                logPanel.log(message);
+            }
+
+            graphPanel.repaint();
+        });
 
         JSplitPane rightSplit = new JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
                 controlPanel,
                 logPanel
         );
-
         rightSplit.setResizeWeight(0.25);
         rightSplit.setDividerLocation(180);
-
 
         JSplitPane topSplit = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 graphPanel,
                 rightSplit
         );
-
         topSplit.setResizeWeight(0.8);
         topSplit.setDividerLocation(850);
 
-
         JPanel bottomPanel = new JPanel(new BorderLayout());
-
         bottomPanel.add(toolPanel, BorderLayout.WEST);
 
         JSplitPane mainSplit = new JSplitPane(
@@ -69,13 +85,10 @@ public class MainFrame extends JFrame
                 topSplit,
                 bottomPanel
         );
-
         mainSplit.setResizeWeight(0.85);
         mainSplit.setDividerLocation(650);
 
         add(mainSplit);
-
-
 
         toolPanel.getAddVertexButton().addActionListener(e -> {
             Tips.showAddVertex(this);
@@ -101,68 +114,85 @@ public class MainFrame extends JFrame
                     toolPanel.getDeleteEdgeButton());
         });
 
+        controlPanel.getStartButton().addActionListener(e -> {
+
+            AlgorithmDialog dialog = new AlgorithmDialog(this);
+            dialog.setVisible(true);
+
+            algorithmMode = dialog.getSelectedMode();
+
+            if (algorithmMode == null) {
+                return;
+            }
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Щёлкните по стартовой вершине.");
+
+            graphPanel.setMode(EditorMode.SELECT_SOURCE);
+        });
+
+        toolPanel.getNextStepButton().addActionListener(e -> {
+
+            if (algorithm == null)
+                return;
+
+            if (algorithm.step()) {
+                for (String message : algorithm.consumeLog()) {
+                    logPanel.log(message);
+                }
+                graphPanel.repaint();
+            } else {
+                logPanel.log("Алгоритм завершён.");
+            }
+        });
+
+/*
         toolPanel.getNextStepButton().addActionListener(e ->
                 makeAlgorithmStep()
         );
-
+*/
         controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
-
 
         graphPanel.setEditorListener(this);
     }
 
-    /**
-     * Переключение режима редактора.
-     */
     private void toggleMode(EditorMode mode, JButton button) {
 
         if (graphPanel.getMode() == mode) {
-
             graphPanel.setMode(EditorMode.NONE);
-
             resetActiveButton();
-
             return;
         }
 
         graphPanel.setMode(mode);
-
         setActiveButton(button);
     }
 
-    /**
-     * Подсветка выбранной кнопки.
-     */
     private void setActiveButton(JButton button) {
 
         resetActiveButton();
 
         activeButton = button;
-
         activeButton.setBackground(Color.GREEN);
     }
 
-    /**
-     * Снять подсветку.
-     */
     private void resetActiveButton() {
 
-        if (activeButton != null) {
+        if (activeButton == null)
+            return;
 
-            activeButton.setBackground(null);
-            activeButton.repaint();
+        activeButton.setBackground(null);
+        activeButton.repaint();
 
-            activeButton = null;
-        }
+        activeButton = null;
     }
 
     @Override
     public void modeFinished() {
 
         graphPanel.setMode(EditorMode.NONE);
-
         resetActiveButton();
-
     }
 
     @Override
@@ -237,8 +267,7 @@ public class MainFrame extends JFrame
             finishAlgorithm();
             return;
         }
-
-        algorithm.step();
+algorithm.step();
         logPanel.logMultiple(algorithm.consumeLog());
     }
 

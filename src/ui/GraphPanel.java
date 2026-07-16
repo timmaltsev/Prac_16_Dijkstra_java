@@ -28,6 +28,35 @@ public class GraphPanel extends JPanel {
     private static final int RADIUS = 20;
 
     private static final int EDGE_TOLERANCE = 8;
+    /* для того, чтобы кликать, выбирая source */
+    private Vertex selectedSource = null;
+    private VertexSelectionListener selectionListener;
+
+    public void setSelectionListener(VertexSelectionListener listener) {
+        this.selectionListener = listener;
+    }
+
+/*
+    private void selectSource(int x, int y) {
+        Vertex vertex = findVertex(x, y);
+
+        if (vertex == null) {
+            return;
+        }
+
+        selectedSource = vertex;
+
+        if (selectionListener != null) {
+            selectionListener.sourceSelected(vertex);
+        }
+
+        if (listener != null) {
+            listener.modeFinished();
+        }
+
+        repaint();
+    }
+*/
 
     public GraphPanel(Graph graph) {
 
@@ -66,7 +95,6 @@ public class GraphPanel extends JPanel {
         switch (mode) {
 
             case ADD_VERTEX:
-
                 addVertex(x, y);
                 break;
 
@@ -88,6 +116,7 @@ public class GraphPanel extends JPanel {
             case SELECT_SOURCE:
 
                 setSource(x, y);
+                // selectSource(x, y);
                 break;
 
             default:
@@ -112,7 +141,6 @@ public class GraphPanel extends JPanel {
 
         if (name.isEmpty())
             return;
-
 
         try { graph.addVertex(name, x, y); }
         catch (IllegalArgumentException ex) {
@@ -395,7 +423,9 @@ public class GraphPanel extends JPanel {
             int x = vertex.getX();
             int y = vertex.getY();
 
-            if (vertex.equals(firstVertex))
+            if (vertex.equals(selectedSource))
+                g2.setColor(Color.GREEN);
+            else if (vertex.equals(firstVertex))
                 g2.setColor(Color.RED);
             else if (vertex.equals(sourceVertex))
                 g2.setColor(new Color(0, 128, 255));
@@ -427,15 +457,4 @@ public class GraphPanel extends JPanel {
         }
 
     }
-
-    // public void setAlgorithm(DijkstraAlgorithm algorithm) {
-
-    //     this.algorithm = algorithm;
-
-    //     repaint();
-
-    // }
-
-    
-
 }

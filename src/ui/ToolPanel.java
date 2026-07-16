@@ -75,6 +75,10 @@ public class ToolPanel extends JPanel {
         return deleteEdgeButton;
     }
 
+    public JButton getPreviousStepButton() {
+        return previousStepButton;
+    }
+
     public JButton getNextStepButton() {
         return nextStepButton;
     }

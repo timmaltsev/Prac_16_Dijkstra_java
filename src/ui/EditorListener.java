@@ -3,7 +3,6 @@ package ui;
 import model.Vertex;
 
 public interface EditorListener {
-
     /**
      * Завершение текущего режима.
      */
