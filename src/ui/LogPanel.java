@@ -1,7 +1,12 @@
 package ui;
 
 import javax.swing.*;
+
+import algorithm.DijkstraAlgorithm;
+
 import java.awt.*;
+
+import java.util.List;
 
 public class LogPanel extends JPanel {
 
@@ -31,7 +36,21 @@ public class LogPanel extends JPanel {
                 textArea.getDocument().getLength());
     }
 
+    public void logMultiple(List<String> messages){
+        for (String line : messages) {
+            log(line);
+        }
+    }
+
     public void clear() {
         textArea.setText("");
+    }
+
+    public void showAlgorithmResult(DijkstraAlgorithm algorithm) {
+        for (String line : algorithm.consumeLog()) {
+            log(line);
+        }
+
+        // textArea.setText("готово.");
     }
 }
