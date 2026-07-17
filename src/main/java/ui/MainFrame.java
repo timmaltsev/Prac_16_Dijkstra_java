@@ -23,6 +23,8 @@ public class MainFrame extends JFrame
     private JButton activeButton = null;
 
     private DijkstraAlgorithm algorithm;
+    private AlgorithmMode algorithmMode;
+    private boolean graphEditingLocked = false;
 
     public MainFrame(Graph graph) {
 
@@ -87,10 +89,10 @@ public class MainFrame extends JFrame
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
 
-        // ВАЖНО: раньше здесь было ДВА addActionListener на getStartButton() —
-        // первый сразу открывал messagebox и ставил SELECT_SOURCE, второй (prepareAlgorithm)
-        // видел уже выставленный SELECT_SOURCE и тут же расценивал это как "повторный клик = отмена".
-        // Кнопка Start из-за этого гасила сама себя в один клик. Оставляем только один обработчик.
+        toolPanel.getMoveVertexButton().addActionListener(e ->
+                toggleMode(EditorMode.MOVE_VERTEX,
+                        toolPanel.getMoveVertexButton()));
+
         controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
 
         toolPanel.getNextStepButton().addActionListener(e -> makeAlgorithmStep());
@@ -109,12 +111,20 @@ public class MainFrame extends JFrame
 
         controlPanel.getClearButton().addActionListener(e -> clearGraph());
 
-        graphPanel.setEditorListener(this);
+        controlPanel.getDeleteButton().addActionListener(e -> deleteGraph());
 
         updateStepButtons();
     }
 
     private void toggleMode(EditorMode mode, JButton button) {
+        if (graphEditingLocked) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Нельзя изменять граф, пока алгоритм выполняется в пошаговом режиме.",
+                    "Алгоритм выполняется",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
         if (graphPanel.getMode() == mode) {
             graphPanel.setMode(EditorMode.NONE);
@@ -168,6 +178,14 @@ public class MainFrame extends JFrame
     }
 
     private void prepareAlgorithm() {
+        if (graphEditingLocked) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Завершите пошаговое выполнение алгоритма перед новым запуском.",
+                    "Алгоритм выполняется",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (graph.getVertices().isEmpty()) {
             JOptionPane.showMessageDialog(
                     this,
@@ -197,10 +215,9 @@ public class MainFrame extends JFrame
 
         AlgorithmDialog dialog = new AlgorithmDialog(this);
         dialog.setVisible(true);
+        algorithmMode = dialog.getSelectedMode();
 
-        AlgorithmMode mode = dialog.getSelectedMode();
-
-        if (mode == null) {
+        if (algorithmMode == null) {
             modeFinished();
             return; // пользователь нажал "Отмена"
         }
@@ -211,17 +228,17 @@ public class MainFrame extends JFrame
 
         logPanel.clear();
 
-        if (mode == AlgorithmMode.INSTANT) {
+        if (algorithmMode == AlgorithmMode.INSTANT) {
 
             algorithm.runToCompletion();
 
             logPanel.showAlgorithmResult(algorithm);
 
-            JOptionPane.showMessageDialog(this, "Алгоритм выполнен.");
-
-            modeFinished();
+            finishAlgorithm();
 
         } else {
+
+            setGraphEditingLocked(true);
 
             logPanel.log("Алгоритм готов к выполнению.");
             logPanel.log("Нажмите \"Следующий шаг\" - \"→\".");
@@ -235,22 +252,39 @@ public class MainFrame extends JFrame
 
     public void makeAlgorithmStep(){
 
-        if (algorithm == null || !algorithm.canStepForward()) {
+        if (algorithm.isFinished()) {
+            finishAlgorithm();
             return;
         }
 
         algorithm.step();
         logPanel.logMultiple(algorithm.consumeLog());
 
-        if (algorithm.isFinished() && !algorithm.canStepForward()) {
-            algorithm.finishAlgorithm();
-            logPanel.logMultiple(algorithm.consumeLog());
-            JOptionPane.showMessageDialog(this, "Алгоритм выполнен.");
+        if (algorithm.isFinished()) {
+            finishAlgorithm();
         }
-
         graphPanel.repaint();
         updateStepButtons();
     }
+
+    private void finishAlgorithm() {
+
+        JOptionPane.showMessageDialog(
+                    this,
+                    "Алгоритм выполнен.");
+
+        algorithm.finishAlgorithm();
+        logPanel.logMultiple(algorithm.consumeLog());
+
+        setGraphEditingLocked(false);
+
+        // graphPanel.clearAlgorithm();
+
+        modeFinished();
+        updateStepButtons();
+    }
+
+
 
     public void makeAlgorithmStepBack(){
 
@@ -286,6 +320,16 @@ public class MainFrame extends JFrame
         graphPanel.clear();
         algorithm = null;
         updateStepButtons();
+    }
+
+    private void deleteGraph() {
+
+        graph.getVertices().clear();
+        graph.getEdges().clear();
+
+        graphPanel.repaint();
+
+        logPanel.log("Граф удалён.");
     }
 
     private void loadGraph() {
@@ -324,4 +368,13 @@ public class MainFrame extends JFrame
         }
 
     }
+
+    private void setGraphEditingLocked(boolean locked) {
+        graphEditingLocked = locked;
+        toolPanel.getAddVertexButton().setEnabled(!locked);
+        toolPanel.getAddEdgeButton().setEnabled(!locked);
+        toolPanel.getDeleteVertexButton().setEnabled(!locked);
+        toolPanel.getDeleteEdgeButton().setEnabled(!locked);
+    }
+
 }

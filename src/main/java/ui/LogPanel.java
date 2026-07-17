@@ -18,7 +18,7 @@ public class LogPanel extends JPanel {
 
         textArea = new JTextArea();
 
-        textArea.setEditable(false);
+        textArea.setEditable(true);
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
 
