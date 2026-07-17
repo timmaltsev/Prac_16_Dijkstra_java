@@ -40,8 +40,10 @@ public class ToolPanel extends JPanel {
         deletePanel.add(deleteEdgeButton);
 
 
-        pathViewButton = new JButton("Просмотр путей");
+        moveVertexButton = new JButton("Переместить");
 
+        pathViewButton = new JButton("Просмотр путей");
+        
 
         previousStepButton = new JButton("←");
         nextStepButton = new JButton("→");

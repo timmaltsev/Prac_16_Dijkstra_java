@@ -15,7 +15,7 @@ import java.awt.event.MouseEvent;
 
 public class GraphPanel extends JPanel {
 
-    private main.java.model.Graph graph;
+    private Graph graph;
 
     private EditorMode mode = EditorMode.NONE;
 
@@ -288,16 +288,40 @@ public class GraphPanel extends JPanel {
             return;
         }
 
-        // else {
 
-        //     java.util.List<Vertex> existingVertices = graph.getVertices();
+        java.util.List<Vertex> existingVertices = graph.getVertices();
 
-        //     for (Vertex stayingVertex : existingVertices) {
-        //         if 
-        //     }
-        // }
+        for (Vertex stayingVertex : existingVertices) {
 
-}
+            if (stayingVertex.equals(movingVertex))
+                continue;
+
+            double distance = Math.hypot(
+                stayingVertex.getX() - x,
+                stayingVertex.getY() - y
+            );
+
+            if (distance < graph.MIN_VERTEX_DISTANCE) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Нельзя ставить вершины слишком близко друг к другу.",
+                        "Ошибка",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+            }
+        }
+
+        movingVertex.setPosition(x, y);
+
+        movingVertex = null;
+
+        if (listener != null)
+            listener.modeFinished();
+    
+        repaint();
+    }
 
     /**
      * Удаление вершины.
@@ -558,7 +582,7 @@ public class GraphPanel extends JPanel {
             int x = vertex.getX();
             int y = vertex.getY();
 
-            if (vertex.equals(selectedSource))
+            if (vertex.equals(movingVertex))
                 g2.setColor(Color.GREEN);
             else if (vertex.equals(firstVertex))
                 g2.setColor(Color.RED);
