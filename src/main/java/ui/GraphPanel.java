@@ -14,9 +14,7 @@ import java.awt.event.MouseEvent;
 
 public class GraphPanel extends JPanel {
 
-    private final Graph graph;
-
-    // private DijkstraAlgorithm algorithm;
+    private Graph graph;
 
     private EditorMode mode = EditorMode.NONE;
 
@@ -72,6 +70,13 @@ public class GraphPanel extends JPanel {
             }
         });
 
+    }
+
+    public void setGraph(Graph graph) {
+
+        this.graph = graph;
+        
+        repaint();
     }
 
     public void setEditorListener(EditorListener listener) {
@@ -264,14 +269,15 @@ public class GraphPanel extends JPanel {
             return;
 
         if (listener != null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "вершина.",
-                    "Ошибка",
-                    JOptionPane.WARNING_MESSAGE);
             listener.sourceVertexSelected(sourceVertex);
         }
 
+        repaint();
+    }
+
+    public void clear(){
+
+        sourceVertex = null;
         repaint();
     }
 
