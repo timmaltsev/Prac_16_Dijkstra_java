@@ -26,6 +26,8 @@ public class MainFrame extends JFrame
     private AlgorithmMode algorithmMode;
     private boolean graphEditingLocked = false;
 
+    private boolean finalIsShown = false;
+
     public MainFrame(Graph graph) {
 
         this.graph = graph;
@@ -236,6 +238,7 @@ public class MainFrame extends JFrame
             logPanel.showAlgorithmResult(algorithm);
 
             finishAlgorithm();
+            finalIsShown = true;
 
         } else {
 
@@ -253,17 +256,24 @@ public class MainFrame extends JFrame
 
     public void makeAlgorithmStep(){
 
-        if (algorithm.isFinished()) {
-            finishAlgorithm();
-            return;
-        }
+        // if (algorithm.isFinished() && !finalIsShown) {
+        //     finishAlgorithm();
+        //     finalIsShown = true;
+        //     return;
+        // }
 
         algorithm.step();
+
         logPanel.logMultiple(algorithm.consumeLog());
 
-        if (algorithm.isFinished()) {
-            finishAlgorithm();
+        if (!finalIsShown) {
+
+            if (algorithm.isFinished()) {
+                finishAlgorithm();
+                finalIsShown = true;
+            }
         }
+
         graphPanel.repaint();
         updateStepButtons();
     }
@@ -321,6 +331,7 @@ public class MainFrame extends JFrame
         graphPanel.clear();
         algorithm = null;
         updateStepButtons();
+        finalIsShown = false;
     }
 
     private void deleteGraph() {

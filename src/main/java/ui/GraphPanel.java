@@ -112,6 +112,7 @@ public class GraphPanel extends JPanel {
     public void clearAlgorithm() {
 
         this.algorithm = null;
+        displayedPath = null;
     }
 
     private void handleMouseClick(int x, int y) {
@@ -177,6 +178,26 @@ public class GraphPanel extends JPanel {
      * Добавление вершины.
      */
     private void addVertex(int x, int y) {
+
+        for (Vertex existing : graph.getVertices()) {
+
+            double distance = Math.hypot(
+                existing.getX() - x,
+                existing.getY() - y
+            );
+
+            if (distance < graph.MIN_VERTEX_DISTANCE) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Нельзя ставить вершины слишком близко друг к другу.",
+                        "Ошибка",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+
+            }
+        }
 
         String name = JOptionPane.showInputDialog(
                 this,
