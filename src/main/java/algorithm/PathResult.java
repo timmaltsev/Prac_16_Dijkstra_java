@@ -45,7 +45,6 @@ public class PathResult {
 
     @Override
     public String toString() {
-
         if (!exists()) {
             return "Путь отсутствует";
         }

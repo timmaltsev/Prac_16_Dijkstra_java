@@ -14,6 +14,7 @@ public class Graph {
     private final List<Edge> edges = new ArrayList<>();
 
     public Vertex addVertex(String name, int x, int y) {
+
         if (findVertexByName(name) != null) {
             throw new IllegalArgumentException(
                     "Вершина с именем \"" + name + "\" уже существует."
@@ -48,6 +49,27 @@ public class Graph {
     }
 
     public Edge addEdge(Vertex from, Vertex to, double weight) {
+        if (from.equals(to)) {
+            throw new IllegalArgumentException(
+                    "Нельзя создать петлю."
+            );
+        }
+
+        if (weight <= 0) {
+            throw new IllegalArgumentException(
+                    "Вес ребра должен быть больше нуля."
+            );
+        }
+
+        for (Edge edge : edges) {
+            if (edge.getFrom().equals(from)
+                    && edge.getTo().equals(to)) {
+
+                throw new IllegalArgumentException(
+                        "Нельзя создавать мультиребро."
+                );
+            }
+        }
         Edge edge = new Edge(from, to, weight);
         edges.add(edge);
         return edge;
