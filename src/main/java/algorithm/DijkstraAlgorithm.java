@@ -54,11 +54,14 @@ public class DijkstraAlgorithm {
         final Vertex currentVertex;
         final Map<Vertex, Double> distances;
         final Set<Vertex> visited;
+        final ArrayList<VertexDistance> queue;
 
-        StepState(Vertex currentVertex, Map<Vertex, Double> distances, Set<Vertex> visited) {
+        StepState(Vertex currentVertex, Map<Vertex, Double> distances, Set<Vertex> visited,
+                    ArrayList<VertexDistance> queue) {
             this.currentVertex = currentVertex;
             this.distances = distances;
             this.visited = visited;
+            this.queue = queue;
         }
     }
 
@@ -72,7 +75,8 @@ public class DijkstraAlgorithm {
         distances.put(source, 0.0);
         queue.add(new VertexDistance(source, 0.0));
 
-        history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited)));
+        history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited),
+                    new ArrayList<>(queue)));
         viewIndex = 0;
     }
 
@@ -147,7 +151,8 @@ public class DijkstraAlgorithm {
         if (next == null) {
             finished = true;
             addLog("Алгоритм завершён: оставшиеся вершины недостижимы из " + source.getName());
-            history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited)));
+            history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited),
+                        new ArrayList<>(queue)));
             return true;
         }
 
@@ -195,7 +200,8 @@ public class DijkstraAlgorithm {
             finished = true;
         }
 
-        history.add(new StepState(next, new HashMap<>(distances), new HashSet<>(visited)));
+        history.add(new StepState(next, new HashMap<>(distances), new HashSet<>(visited),
+                    new ArrayList<>(queue)));
         return true;
     }
 
@@ -271,6 +277,8 @@ public class DijkstraAlgorithm {
         while (canStepForward()) {
             step();
         }
+
+        finishAlgorithm();
     }
 
     /**
@@ -316,6 +324,20 @@ public class DijkstraAlgorithm {
         return source;
     }
 
+    public boolean isInQueue(Vertex vertex) {
+        
+        for (VertexDistance point : history.get(viewIndex).queue) {
+            if (point.getVertex().equals(vertex))
+                return true;
+        }
+
+        return false;
+    }
+
+    public Map<Vertex, Vertex> getPredecessors() {
+        return predecessors;
+    }
+
     private void addLog(String message) {
         log.add(message);
     }
@@ -331,7 +353,7 @@ public class DijkstraAlgorithm {
         return result;
     }
 
-    private void finishAlgorithm() {
+    public void finishAlgorithm() {
 
         finished = true;
 

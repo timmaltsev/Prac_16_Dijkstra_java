@@ -1,6 +1,7 @@
 package ui;
 
 import model.Vertex;
+import algorithm.PathResult;
 
 public interface EditorListener {
     /**
@@ -9,7 +10,13 @@ public interface EditorListener {
     void modeFinished();
 
     /**
-     * Запускк алгоритма
+     * Запуск алгоритма.
      */
     void sourceVertexSelected(Vertex sourceVertex);
+
+    /**
+     * Выбор вершины для просмотра пути.
+     * @param result
+     */
+    public void onPathSelected(PathResult result);
 }

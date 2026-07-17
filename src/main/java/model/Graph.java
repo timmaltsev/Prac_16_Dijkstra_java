@@ -121,4 +121,14 @@ public class Graph {
 
         return result;
     }
+
+    public boolean hasEdge(Vertex from, Vertex to) {
+        for (Edge edge : edges) {
+            if (edge.getFrom().equals(from)
+                    && edge.getTo().equals(to)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

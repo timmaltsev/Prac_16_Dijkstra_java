@@ -6,7 +6,8 @@ import model.Vertex;
 
 import javax.swing.*;
 
-// import algorithm.DijkstraAlgorithm;
+import algorithm.DijkstraAlgorithm;
+import algorithm.PathResult;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -14,18 +15,25 @@ import java.awt.event.MouseEvent;
 
 public class GraphPanel extends JPanel {
 
-    private Graph graph;
+    private main.java.model.Graph graph;
 
     private EditorMode mode = EditorMode.NONE;
 
     private EditorListener listener;
 
+    private DijkstraAlgorithm algorithm;
+
     private Vertex firstVertex = null;
     private Vertex sourceVertex = null;
+    private Vertex movingVertex = null;
+
+    private java.util.List<Vertex> displayedPath;
 
     private static final int RADIUS = 20;
 
     private static final int EDGE_TOLERANCE = 8;
+
+    private static final int BIDIRECTIONAL_OFFSET = 10;
     /* для того, чтобы кликать, выбирая source */
     private Vertex selectedSource = null;
     private VertexSelectionListener selectionListener;
@@ -95,6 +103,17 @@ public class GraphPanel extends JPanel {
         repaint();
     }
 
+    public void setAlgorithm(DijkstraAlgorithm algorithm) {
+
+        this.algorithm = algorithm;
+        repaint();
+    }
+
+    public void clearAlgorithm() {
+
+        this.algorithm = null;
+    }
+
     private void handleMouseClick(int x, int y) {
 
         switch (mode) {
@@ -118,10 +137,35 @@ public class GraphPanel extends JPanel {
                 deleteEdge(x, y);
                 break;
 
+            case MOVE_VERTEX:
+
+                moveVertex(x,y);
+                break;
+
             case SELECT_SOURCE:
 
                 setSource(x, y);
                 // selectSource(x, y);
+                break;
+
+            case VIEW_PATH:
+
+                if (algorithm == null)
+                    return;
+
+                Vertex target = findVertex(x, y);
+
+                if (target != null) {
+
+                    PathResult result = algorithm.getPath(target);
+
+                    displayedPath = result.getPath();
+
+                    listener.onPathSelected(result);
+
+                    repaint();
+                }
+
                 break;
 
             default:
@@ -224,6 +268,38 @@ public class GraphPanel extends JPanel {
     }
 
     /**
+     * Перемещение вершины.
+     * @param x
+     * @param y
+     */
+    private void moveVertex(int x, int y) {
+
+        if (movingVertex == null) {
+
+            Vertex vertex = findVertex(x, y);
+
+            if (vertex == null)
+                return;
+
+            movingVertex = vertex;
+
+            repaint();
+
+            return;
+        }
+
+        // else {
+
+        //     java.util.List<Vertex> existingVertices = graph.getVertices();
+
+        //     for (Vertex stayingVertex : existingVertices) {
+        //         if 
+        //     }
+        // }
+
+}
+
+    /**
      * Удаление вершины.
      */
     private void deleteVertex(int x, int y) {
@@ -278,6 +354,8 @@ public class GraphPanel extends JPanel {
     public void clear(){
 
         sourceVertex = null;
+        clearAlgorithm();
+
         repaint();
     }
 
@@ -354,14 +432,51 @@ public class GraphPanel extends JPanel {
      */
     private void drawDirectedEdge(Graphics2D g2, Edge edge) {
 
+        boolean treeEdge = false;
+        boolean candidateEdge = false;
+
         Vertex from = edge.getFrom();
         Vertex to = edge.getTo();
+
+        if (algorithm != null) {
+
+            Vertex pred = algorithm.getPredecessors().get(to);
+
+            if (pred != null && pred.equals(from)) {
+
+                if (algorithm.getVisited().contains(to))
+                    treeEdge = true;
+                else
+                    candidateEdge = true;
+            }
+
+            if (isPathEdge(edge)) 
+                g2.setColor(Color.RED);
+        }
+
+
+        if (treeEdge)
+            g2.setStroke(new BasicStroke(6));
+        if (candidateEdge) 
+            g2.setStroke(new BasicStroke(3));
 
         double x1 = from.getX();
         double y1 = from.getY();
 
         double x2 = to.getX();
         double y2 = to.getY();
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+
+        double length = Math.sqrt(dx * dx + dy * dy);
+
+        double ux = dx / length;
+        double uy = dy / length;
+
+        double nx = -uy;
+        double ny = ux;
+
 
         double angle = Math.atan2(y2 - y1, x2 - x1);
 
@@ -370,6 +485,16 @@ public class GraphPanel extends JPanel {
 
         int endX = (int) (x2 - RADIUS * Math.cos(angle));
         int endY = (int) (y2 - RADIUS * Math.sin(angle));
+
+
+        if (graph.hasEdge(to, from)) {
+
+            startX += (int)(nx * BIDIRECTIONAL_OFFSET);
+            startY += (int)(ny * BIDIRECTIONAL_OFFSET);
+
+            endX += (int)(nx * BIDIRECTIONAL_OFFSET);
+            endY += (int)(ny * BIDIRECTIONAL_OFFSET);
+        }
 
         g2.drawLine(startX, startY, endX, endY);
 
@@ -391,6 +516,8 @@ public class GraphPanel extends JPanel {
         g2.drawLine(endX, endY, xArrow1, yArrow1);
         g2.drawLine(endX, endY, xArrow2, yArrow2);
 
+        g2.setStroke(new BasicStroke(1));
+
         String weight = String.valueOf(edge.getWeight());
 
         FontMetrics fm = g2.getFontMetrics();
@@ -403,6 +530,8 @@ public class GraphPanel extends JPanel {
                 textX - fm.stringWidth(weight) / 2,
                 textY - 5
         );
+
+        g2.setColor(Color.BLACK);
     }
 
     @Override
@@ -438,6 +567,28 @@ public class GraphPanel extends JPanel {
             else
                 g2.setColor(new Color(255, 180, 0));
 
+            if (!vertex.equals(sourceVertex))
+                if (algorithm != null) {
+
+                    Color color;
+
+                    if (algorithm.getVisited().contains(vertex)) {
+                        color = new Color(170, 220, 255);
+                    }
+                    else if (algorithm.isInQueue(vertex)) {
+                        color = new Color(225, 210, 255);
+                    }
+
+                    else 
+                        color = new Color(255, 180, 0);
+
+                    if (isPathVertex(vertex))
+                        color = new Color(0, 128, 255);
+
+                    g2.setColor(color);
+
+                }
+
             g2.fillOval(
                     x - RADIUS,
                     y - RADIUS,
@@ -460,7 +611,58 @@ public class GraphPanel extends JPanel {
             int ty = y + fm.getAscent() / 2 - 2;
 
             g2.drawString(vertex.getName(), tx, ty);
+
+            if (algorithm != null) {
+
+                Double d = algorithm.getDistances().get(vertex);
+
+                String text;
+
+                if (d == null || Double.isInfinite(d))
+                    text = "∞";
+                else
+                    text = String.valueOf(d);
+
+                g2.setColor(Color.RED);
+
+                Font oldFont = g2.getFont();
+
+                g2.setFont(oldFont.deriveFont(Font.BOLD, 14f));
+
+                g2.drawString(
+                        text,
+                        vertex.getX() + RADIUS + 4,
+                        vertex.getY() - RADIUS
+                );
+
+                g2.setFont(oldFont);
+            }
         }
 
+    }
+
+    private boolean isPathVertex(Vertex vertex) {
+
+        return displayedPath != null &&
+            displayedPath.contains(vertex);
+
+    }
+
+    private boolean isPathEdge(Edge edge) {
+
+        if (displayedPath == null)
+            return false;
+
+        for (int i = 0; i < displayedPath.size() - 1; i++) {
+
+            Vertex from = displayedPath.get(i);
+            Vertex to = displayedPath.get(i + 1);
+
+            if (edge.getFrom().equals(from)
+                    && edge.getTo().equals(to))
+                return true;
+        }
+
+        return false;
     }
 }
