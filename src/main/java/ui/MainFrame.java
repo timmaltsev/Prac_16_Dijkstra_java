@@ -112,15 +112,6 @@ public class MainFrame extends JFrame
 
         controlPanel.getStartButton().addActionListener(e -> {
 
-            AlgorithmDialog dialog = new AlgorithmDialog(this);
-            dialog.setVisible(true);
-
-            algorithmMode = dialog.getSelectedMode();
-
-            if (algorithmMode == null) {
-                return;
-            }
-
             JOptionPane.showMessageDialog(
                     this,
                     "Щёлкните по стартовой вершине.");
