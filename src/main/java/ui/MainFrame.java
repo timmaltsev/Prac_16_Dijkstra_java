@@ -88,11 +88,11 @@ public class MainFrame extends JFrame
         toolPanel.getDeleteEdgeButton().addActionListener(e ->
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
-
+                        
         toolPanel.getMoveVertexButton().addActionListener(e ->
                 toggleMode(EditorMode.MOVE_VERTEX,
-                        toolPanel.getMoveVertexButton()));
-
+                        toolPanel.getMoveVertexButton()));        
+                        
         controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
 
         toolPanel.getNextStepButton().addActionListener(e -> makeAlgorithmStep());
@@ -112,6 +112,7 @@ public class MainFrame extends JFrame
         controlPanel.getClearButton().addActionListener(e -> clearGraph());
 
         controlPanel.getDeleteButton().addActionListener(e -> deleteGraph());
+        controlPanel.getCreateButton().addActionListener(e -> createGraph());
 
         updateStepButtons();
     }
@@ -376,5 +377,39 @@ public class MainFrame extends JFrame
         toolPanel.getDeleteVertexButton().setEnabled(!locked);
         toolPanel.getDeleteEdgeButton().setEnabled(!locked);
     }
+    private void createGraph() {
 
+        if (graphEditingLocked) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Нельзя создать новый граф, пока алгоритм выполняется.",
+                    "Алгоритм выполняется",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!graph.getVertices().isEmpty()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Граф уже существует.",
+                "Создание графа",
+                JOptionPane.WARNING_MESSAGE);
+           return;
+        }
+
+        graph = new Graph();
+
+        int x = graphPanel.getWidth() / 2;
+        int y = graphPanel.getHeight() / 2;
+
+        graph.addVertex("A", x, y);
+
+        graphPanel.setGraph(graph);
+
+        algorithm = null;
+        updateStepButtons();
+
+        graphPanel.repaint();
+
+        logPanel.log("Создан новый граф.");
+    }
 }
