@@ -17,16 +17,16 @@ import java.util.Set;
 /**
  * Пошаговая реализация алгоритма Дейкстры.
  *
- * Изменения по сравнению с предыдущей версией:
- * 1. Поиск ближайшей непосещённой вершины теперь через PriorityQueue
- *    (ленивое удаление устаревших записей), а не линейный перебор всех вершин.
- * 2. Появилась история снимков состояния — step() двигает алгоритм вперёд
- *    и запоминает снимок, stepBack() листает уже посчитанные снимки назад
- *    БЕЗ пересчёта. Реальные вычисления (distances/visited/predecessors)
- *    двигаются только вперёд — навигация назад работает поверх готовой истории.
- * 3. Лог (addLog/consumeLog) пишется только при РЕАЛЬНОМ вычислении шага,
- *    не при простом пролистывании уже посчитанной истории назад-вперёд —
- *    иначе в LogPanel задваивались бы одни и те же строки.
+ * Изменения в этой версии:
+ * 1. В историю снимков (StepState) добавлен predecessors — раньше туда попадали
+ *    только distances/visited/queue, а predecessors читался из "живого" поля.
+ *    Из-за этого при stepBack() расстояния откатывались корректно, а подсветка
+ *    дерева кратчайших путей (tree/candidate рёбра в GraphPanel) — нет, потому что
+ *    getPredecessors() отдавал самое АКТУАЛЬНОЕ состояние, а не то, что на снимке.
+ * 2. finishAlgorithm() теперь идемпотентен (флаг summaryLogged) — раньше при
+ *    повторном вызове (а он вызывался дважды в INSTANT-режиме: один раз изнутри
+ *    runToCompletion(), второй раз явно из MainFrame) итоговая сводка расстояний
+ *    дублировалась в логе.
  */
 public class DijkstraAlgorithm {
     private final List<String> log = new ArrayList<>();
@@ -41,6 +41,7 @@ public class DijkstraAlgorithm {
     private final Map<Vertex, Vertex> predecessors = new HashMap<>();
     private final Set<Vertex> visited = new HashSet<>();
     private boolean finished = false;
+    private boolean summaryLogged = false;
 
     // приоритетная очередь для быстрого выбора следующей вершины (ленивое удаление устаревших записей)
     private final PriorityQueue<VertexDistance> queue =
@@ -54,13 +55,15 @@ public class DijkstraAlgorithm {
         final Vertex currentVertex;
         final Map<Vertex, Double> distances;
         final Set<Vertex> visited;
+        final Map<Vertex, Vertex> predecessors;
         final ArrayList<VertexDistance> queue;
 
         StepState(Vertex currentVertex, Map<Vertex, Double> distances, Set<Vertex> visited,
-                    ArrayList<VertexDistance> queue) {
+                  Map<Vertex, Vertex> predecessors, ArrayList<VertexDistance> queue) {
             this.currentVertex = currentVertex;
             this.distances = distances;
             this.visited = visited;
+            this.predecessors = predecessors;
             this.queue = queue;
         }
     }
@@ -75,18 +78,24 @@ public class DijkstraAlgorithm {
         distances.put(source, 0.0);
         queue.add(new VertexDistance(source, 0.0));
 
-        history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited),
-                    new ArrayList<>(queue)));
+        history.add(snapshot(null));
         viewIndex = 0;
+    }
+
+    private StepState snapshot(Vertex currentVertex) {
+        return new StepState(
+                currentVertex,
+                new HashMap<>(distances),
+                new HashSet<>(visited),
+                new HashMap<>(predecessors),
+                new ArrayList<>(queue)
+        );
     }
 
     /**
      * Шаг вперёд. Если пользователь до этого нажимал "назад" и мы находимся
      * внутри уже посчитанной истории — просто листаем её дальше, без пересчёта.
      * Если мы на границе истории — реально считаем новый шаг алгоритма.
-     *
-     * @return true, если реально удалось продвинуться (вычислить новый шаг или
-     *         перейти к уже посчитанному); false, если двигаться больше некуда
      */
     public boolean step() {
         if (viewIndex < history.size() - 1) {
@@ -103,8 +112,6 @@ public class DijkstraAlgorithm {
 
     /**
      * Шаг назад — листает историю снимков, вычисления не трогает.
-     *
-     * @return true, если получилось отступить назад; false, если мы уже в самом начале
      */
     public boolean stepBack() {
         if (viewIndex <= 0) {
@@ -129,10 +136,6 @@ public class DijkstraAlgorithm {
         return viewIndex > 0;
     }
 
-    /**
-     * Реальное вычисление одного шага — вызывается только когда мы на границе
-     * истории (нечего листать дальше без пересчёта).
-     */
     private boolean computeStep() {
         if (finished) {
             return false;
@@ -145,14 +148,12 @@ public class DijkstraAlgorithm {
                 next = candidate.getVertex();
                 break;
             }
-            // иначе это устаревшая запись для уже обработанной вершины — пропускаем (ленивое удаление)
         }
 
         if (next == null) {
             finished = true;
             addLog("Алгоритм завершён: оставшиеся вершины недостижимы из " + source.getName());
-            history.add(new StepState(null, new HashMap<>(distances), new HashSet<>(visited),
-                        new ArrayList<>(queue)));
+            history.add(snapshot(null));
             return true;
         }
 
@@ -200,8 +201,7 @@ public class DijkstraAlgorithm {
             finished = true;
         }
 
-        history.add(new StepState(next, new HashMap<>(distances), new HashSet<>(visited),
-                    new ArrayList<>(queue)));
+        history.add(snapshot(next));
         return true;
     }
 
@@ -277,14 +277,9 @@ public class DijkstraAlgorithm {
         while (canStepForward()) {
             step();
         }
-
         finishAlgorithm();
     }
 
-    /**
-     * Восстанавливает кратчайший путь от исходной вершины до target.
-     * Осмысленный результат — только после завершения работы алгоритма (isFinished()).
-     */
     public PathResult getPath(Vertex target) {
         if (!distances.containsKey(target) || distances.get(target) == Double.POSITIVE_INFINITY) {
             return new PathResult(Collections.emptyList(), Double.POSITIVE_INFINITY);
@@ -301,8 +296,8 @@ public class DijkstraAlgorithm {
         return new PathResult(path, distances.get(target));
     }
 
-    // ==== геттеры состояния — читают из ИСТОРИИ (viewIndex), а не из живых полей,
-    //      чтобы stepBack() реально показывал прошлое состояние ====
+    // ==== геттеры состояния — читают из ИСТОРИИ (viewIndex), чтобы stepBack()
+    //      реально откатывал ВСЮ картину разом, включая дерево путей ====
 
     public Vertex getCurrentVertex() {
         return history.get(viewIndex).currentVertex;
@@ -316,6 +311,18 @@ public class DijkstraAlgorithm {
         return history.get(viewIndex).visited;
     }
 
+    public Map<Vertex, Vertex> getPredecessors() {
+        return history.get(viewIndex).predecessors;
+    }
+
+    public boolean isInQueue(Vertex vertex) {
+        for (VertexDistance point : history.get(viewIndex).queue) {
+            if (point.getVertex().equals(vertex))
+                return true;
+        }
+        return false;
+    }
+
     public boolean isFinished() {
         return finished;
     }
@@ -324,38 +331,31 @@ public class DijkstraAlgorithm {
         return source;
     }
 
-    public boolean isInQueue(Vertex vertex) {
-        
-        for (VertexDistance point : history.get(viewIndex).queue) {
-            if (point.getVertex().equals(vertex))
-                return true;
-        }
-
-        return false;
-    }
-
-    public Map<Vertex, Vertex> getPredecessors() {
-        return predecessors;
-    }
-
     private void addLog(String message) {
         log.add(message);
     }
 
     public List<String> consumeLog() {
-
         List<String> result = new ArrayList<>(
                 log.subList(lastLogIndex, log.size())
         );
-
         lastLogIndex = log.size();
-
         return result;
     }
 
+    /**
+     * Печатает итоговую сводку в лог. Идемпотентен — повторные вызовы
+     * ничего не делают, чтобы сводка не задваивалась (раньше вызывался
+     * и изнутри runToCompletion(), и отдельно из MainFrame).
+     */
     public void finishAlgorithm() {
 
         finished = true;
+
+        if (summaryLogged) {
+            return;
+        }
+        summaryLogged = true;
 
         addLog("");
         addLog("Алгоритм завершен.");
@@ -386,7 +386,5 @@ public class DijkstraAlgorithm {
                 addLog(vertex.getName() + " : " + distance);
             }
         }
-
     }
-
 }

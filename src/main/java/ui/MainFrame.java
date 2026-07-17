@@ -3,7 +3,6 @@ package ui;
 import algorithm.DijkstraAlgorithm;
 import model.Graph;
 import model.Vertex;
-import algorithm.DijkstraAlgorithm;
 import input.JsonLoader;
 import algorithm.PathResult;
 
@@ -23,7 +22,6 @@ public class MainFrame extends JFrame
 
     private JButton activeButton = null;
 
-    private AlgorithmMode algorithmMode;
     private DijkstraAlgorithm algorithm;
 
     public MainFrame(Graph graph) {
@@ -31,7 +29,7 @@ public class MainFrame extends JFrame
         this.graph = graph;
         this.loader = new JsonLoader();
 
-        setTitle("Версия 1");
+        setTitle("Версия 2");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -42,28 +40,6 @@ public class MainFrame extends JFrame
         toolPanel = new ToolPanel();
         controlPanel = new ControlPanel();
         logPanel = new LogPanel();
-
-        graphPanel.setSelectionListener(source -> {
-
-            algorithm = new DijkstraAlgorithm(graph, source);
-
-            logPanel.clear();
-
-            if (algorithmMode == AlgorithmMode.INSTANT) {
-
-                algorithm.runToCompletion();
-
-            } else {
-
-                algorithm.step();
-            }
-
-            for (String message : algorithm.consumeLog()) {
-                logPanel.log(message);
-            }
-
-            graphPanel.repaint();
-        });
 
         JSplitPane rightSplit = new JSplitPane(
                 JSplitPane.VERTICAL_SPLIT,
@@ -110,27 +86,16 @@ public class MainFrame extends JFrame
         toolPanel.getDeleteEdgeButton().addActionListener(e ->
                 toggleMode(EditorMode.DELETE_EDGE,
                         toolPanel.getDeleteEdgeButton()));
-        
-        toolPanel.getMoveVertexButton().addActionListener(e ->
-                toggleMode(EditorMode.MOVE_VERTEX,
-                        toolPanel.getMoveVertexButton()));
-                    
-        controlPanel.getStartButton().addActionListener(e -> {
 
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Щёлкните по стартовой вершине.");
+        // ВАЖНО: раньше здесь было ДВА addActionListener на getStartButton() —
+        // первый сразу открывал messagebox и ставил SELECT_SOURCE, второй (prepareAlgorithm)
+        // видел уже выставленный SELECT_SOURCE и тут же расценивал это как "повторный клик = отмена".
+        // Кнопка Start из-за этого гасила сама себя в один клик. Оставляем только один обработчик.
+        controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
 
-            graphPanel.setMode(EditorMode.SELECT_SOURCE);
-        });
+        toolPanel.getNextStepButton().addActionListener(e -> makeAlgorithmStep());
 
-        toolPanel.getNextStepButton().addActionListener(e -> {
-
-            if (algorithm == null)
-                return;
-
-            makeAlgorithmStep();
-        });
+        toolPanel.getPreviousStepButton().addActionListener(e -> makeAlgorithmStepBack());
 
         toolPanel.getPathViewButton().addActionListener(e -> {
 
@@ -142,12 +107,11 @@ public class MainFrame extends JFrame
 
         controlPanel.getLoadButton().addActionListener(e -> loadGraph());
 
-        controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
-
         controlPanel.getClearButton().addActionListener(e -> clearGraph());
 
-
         graphPanel.setEditorListener(this);
+
+        updateStepButtons();
     }
 
     private void toggleMode(EditorMode mode, JButton button) {
@@ -213,11 +177,6 @@ public class MainFrame extends JFrame
             return;
         }
 
-        if (graph.getVertices().isEmpty()) {
-            logPanel.log("Граф пуст.");
-            return;
-        }
-
         if (graphPanel.getMode() == EditorMode.SELECT_SOURCE) {
 
             modeFinished();
@@ -242,6 +201,7 @@ public class MainFrame extends JFrame
         AlgorithmMode mode = dialog.getSelectedMode();
 
         if (mode == null) {
+            modeFinished();
             return; // пользователь нажал "Отмена"
         }
 
@@ -249,52 +209,83 @@ public class MainFrame extends JFrame
 
         graphPanel.setAlgorithm(algorithm);
 
+        logPanel.clear();
+
         if (mode == AlgorithmMode.INSTANT) {
 
             algorithm.runToCompletion();
 
             logPanel.showAlgorithmResult(algorithm);
 
-            finishAlgorithm();
+            JOptionPane.showMessageDialog(this, "Алгоритм выполнен.");
+
+            modeFinished();
 
         } else {
 
             logPanel.log("Алгоритм готов к выполнению.");
             logPanel.log("Нажмите \"Следующий шаг\" - \"→\".");
+
+            modeFinished();
         }
 
+        graphPanel.repaint();
+        updateStepButtons();
     }
 
     public void makeAlgorithmStep(){
 
-        if (algorithm.isFinished()) {
-            finishAlgorithm();
+        if (algorithm == null || !algorithm.canStepForward()) {
             return;
         }
 
         algorithm.step();
         logPanel.logMultiple(algorithm.consumeLog());
 
+        if (algorithm.isFinished() && !algorithm.canStepForward()) {
+            algorithm.finishAlgorithm();
+            logPanel.logMultiple(algorithm.consumeLog());
+            JOptionPane.showMessageDialog(this, "Алгоритм выполнен.");
+        }
+
         graphPanel.repaint();
+        updateStepButtons();
     }
 
-    private void finishAlgorithm() {
+    public void makeAlgorithmStepBack(){
 
-        JOptionPane.showMessageDialog(
-                    this,
-                    "Алгоритм выполнен.");
+        if (algorithm == null || !algorithm.canStepBack()) {
+            return;
+        }
 
-        algorithm.finishAlgorithm();
+        algorithm.stepBack();
         logPanel.logMultiple(algorithm.consumeLog());
 
-        // graphPanel.clearAlgorithm();
+        graphPanel.repaint();
+        updateStepButtons();
+    }
 
-        modeFinished();
+    /**
+     * Держит кнопки "←"/"→" в актуальном состоянии — недоступны, когда
+     * двигаться в эту сторону уже некуда. Заодно избавляет от повторного
+     * всплывающего "Алгоритм выполнен" при накликивании "→" после конца.
+     */
+    private void updateStepButtons() {
+
+        boolean hasAlgorithm = algorithm != null;
+
+        toolPanel.getNextStepButton().setEnabled(
+                hasAlgorithm && algorithm.canStepForward());
+
+        toolPanel.getPreviousStepButton().setEnabled(
+                hasAlgorithm && algorithm.canStepBack());
     }
 
     private void clearGraph() {
 
         graphPanel.clear();
+        algorithm = null;
+        updateStepButtons();
     }
 
     private void loadGraph() {
@@ -313,6 +304,9 @@ public class MainFrame extends JFrame
                     graphPanel.getSize());
 
             graphPanel.setGraph(graph);
+
+            algorithm = null;
+            updateStepButtons();
 
             graphPanel.repaint();
 
