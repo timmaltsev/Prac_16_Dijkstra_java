@@ -3,6 +3,7 @@ package ui;
 import model.Graph;
 import model.Vertex;
 import algorithm.DijkstraAlgorithm;
+import input.JsonLoader;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +11,8 @@ import java.awt.*;
 public class MainFrame extends JFrame
                        implements EditorListener {
 
-    private final Graph graph;
+    private Graph graph;
+    private final JsonLoader loader;
 
     private final GraphPanel graphPanel;
     private final ToolPanel toolPanel;
@@ -18,13 +20,13 @@ public class MainFrame extends JFrame
     private final LogPanel logPanel;
 
     private DijkstraAlgorithm algorithm;
-    // private AlgorithmMode algorithmMode;
 
     private JButton activeButton = null;
 
     public MainFrame(Graph graph) {
 
         this.graph = graph;
+        this.loader = new JsonLoader();
 
         setTitle("Версия 1");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -76,36 +78,31 @@ public class MainFrame extends JFrame
         add(mainSplit);
 
 
+        toolPanel.getAddVertexButton().addActionListener(e ->
+                toggleMode(EditorMode.ADD_VERTEX,
+                        toolPanel.getAddVertexButton()));
 
-        toolPanel.getAddVertexButton().addActionListener(e -> {
-            Tips.showAddVertex(this);
-            toggleMode(EditorMode.ADD_VERTEX,
-                    toolPanel.getAddVertexButton());
-        });
+        toolPanel.getAddEdgeButton().addActionListener(e ->
+                toggleMode(EditorMode.ADD_EDGE,
+                        toolPanel.getAddEdgeButton()));
 
-        toolPanel.getAddEdgeButton().addActionListener(e -> {
-            Tips.showAddEdge(this);
-            toggleMode(EditorMode.ADD_EDGE,
-                    toolPanel.getAddEdgeButton());
-        });
+        toolPanel.getDeleteVertexButton().addActionListener(e ->
+                toggleMode(EditorMode.DELETE_VERTEX,
+                        toolPanel.getDeleteVertexButton()));
 
-        toolPanel.getDeleteVertexButton().addActionListener(e -> {
-            Tips.showDeleteVertex(this);
-            toggleMode(EditorMode.DELETE_VERTEX,
-                    toolPanel.getDeleteVertexButton());
-        });
-
-        toolPanel.getDeleteEdgeButton().addActionListener(e -> {
-            Tips.showDeleteEdge(this);
-            toggleMode(EditorMode.DELETE_EDGE,
-                    toolPanel.getDeleteEdgeButton());
-        });
+        toolPanel.getDeleteEdgeButton().addActionListener(e ->
+                toggleMode(EditorMode.DELETE_EDGE,
+                        toolPanel.getDeleteEdgeButton()));
 
         toolPanel.getNextStepButton().addActionListener(e ->
                 makeAlgorithmStep()
         );
 
+        controlPanel.getLoadButton().addActionListener(e -> loadGraph());
+
         controlPanel.getStartButton().addActionListener(e -> prepareAlgorithm());
+
+        controlPanel.getClearButton().addActionListener(e -> clearGraph());
 
 
         graphPanel.setEditorListener(this);
@@ -251,28 +248,42 @@ public class MainFrame extends JFrame
         modeFinished();
     }
 
-    // private Vertex chooseSourceVertex() {
+    private void clearGraph() {
 
-    //     Object[] names =
-    //             graph.getVertices()
-    //                     .stream()
-    //                     .map(Vertex::getName)
-    //                     .toArray();
+        graphPanel.clear();
+    }
 
-    //     Object result =
-    //             JOptionPane.showInputDialog(
-    //                     this,
-    //                     "Выберите начальную вершину",
-    //                     "Алгоритм Дейкстры",
-    //                     JOptionPane.QUESTION_MESSAGE,
-    //                     null,
-    //                     names,
-    //                     names[0]);
+    private void loadGraph() {
 
-    //     if (result == null)
-    //         return null;
+        JFileChooser chooser = new JFileChooser();
 
-    //     return graph.findVertexByName(result.toString());
+        if (chooser.showOpenDialog(this)
+                != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
 
-    // }
+        try {
+
+            graph = loader.load(
+                    chooser.getSelectedFile(),
+                    graphPanel.getSize());
+
+            graphPanel.setGraph(graph);
+
+            graphPanel.repaint();
+
+            logPanel.log("Граф успешно загружен.");
+
+        }
+        catch (Exception ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Ошибка",
+                    JOptionPane.ERROR_MESSAGE);
+
+        }
+
+    }
 }
