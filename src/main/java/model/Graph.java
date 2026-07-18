@@ -9,7 +9,7 @@ import java.util.List;
  * по плану прототипа это только структура данных.
  */
 public class Graph {
-    private final double MIN_VERTEX_DISTANCE = 50;
+    public static final double MIN_VERTEX_DISTANCE = 50;
     private final List<Vertex> vertices = new ArrayList<>();
     private final List<Edge> edges = new ArrayList<>();
 
@@ -120,5 +120,15 @@ public class Graph {
         }
 
         return result;
+    }
+
+    public boolean hasEdge(Vertex from, Vertex to) {
+        for (Edge edge : edges) {
+            if (edge.getFrom().equals(from)
+                    && edge.getTo().equals(to)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

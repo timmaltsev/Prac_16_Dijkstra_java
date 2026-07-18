@@ -9,6 +9,7 @@ public class ToolPanel extends JPanel {
     private final JButton addEdgeButton;
     private final JButton deleteVertexButton;
     private final JButton deleteEdgeButton;
+    private final JButton moveVertexButton;
     private final JButton pathViewButton;
     private final JButton previousStepButton;
     private final JButton nextStepButton;
@@ -39,8 +40,10 @@ public class ToolPanel extends JPanel {
         deletePanel.add(deleteEdgeButton);
 
 
-        pathViewButton = new JButton("Просмотр путей");
+        moveVertexButton = new JButton("Переместить");
 
+        pathViewButton = new JButton("Просмотр путей");
+        
 
         previousStepButton = new JButton("←");
         nextStepButton = new JButton("→");
@@ -48,6 +51,10 @@ public class ToolPanel extends JPanel {
 
         add(addPanel);
         add(deletePanel);
+
+        add(Box.createHorizontalStrut(20));
+
+        add(moveVertexButton);
 
         add(Box.createHorizontalStrut(20));
 
@@ -73,6 +80,14 @@ public class ToolPanel extends JPanel {
 
     public JButton getDeleteEdgeButton() {
         return deleteEdgeButton;
+    }
+
+    public JButton getMoveVertexButton() {
+        return moveVertexButton;
+    }
+    
+    public JButton getPathViewButton() {
+        return pathViewButton;
     }
 
     public JButton getPreviousStepButton() {
